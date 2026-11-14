@@ -23,6 +23,7 @@ from typing import Callable
 
 import numpy as np
 import torch
+from scipy.special import gammaincc
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -64,6 +65,33 @@ def discover_models() -> list[dict]:
 
 
 # --------------------------------------------------------------------------- engine
+class LiveDetector:
+    """The detector's whole-text test, updated one generated token at a time.
+
+    Scores the reply on its own (no prompt), exactly as checking the text later
+    would, so the running p-value converges to what /api/detect reports."""
+
+    def __init__(self, wm: Watermarker):
+        self.wm, self.ids, self.seen = wm, [], set()
+        self.total, self.n = 0.0, 0
+
+    def push(self, tok: int) -> dict:
+        h, ids = self.wm.context_width, self.ids
+        ids.append(int(tok))
+        s = None
+        if len(ids) > h:
+            ctx = tuple(ids[-h - 1:-1])
+            if ctx not in self.seen:
+                self.seen.add(ctx)
+                u = keyed_uniforms(self.wm.key, ctx, tok + 1)[tok]
+                s = float(-np.log1p(-u))
+                self.total += s
+                self.n += 1
+        p = float(gammaincc(self.n, self.total)) if self.n else 1.0
+        z = (self.total - self.n) / np.sqrt(max(self.n, 1))
+        return {"s": s, "p": p, "n": self.n, "z": round(float(z), 3)}
+
+
 class Engine:
     """Loads tokenizers and models lazily. All model work runs on one worker thread
     (MLX streams are per-thread, and it keeps generation one at a time)."""
@@ -122,6 +150,7 @@ class Engine:
         steps: list = []
         gen_ids: list[int] = []
         state = {"text": ""}
+        live = LiveDetector(wm)
         backend = self.info[name]["backend"]
         eos: set[int] = set()
 
@@ -135,7 +164,7 @@ class Engine:
                 gen_ids.append(int(chosen))
                 full = tok.decode(gen_ids, skip_special_tokens=True)
                 delta, state["text"] = full[len(state["text"]):], full  # incremental decode (multi-byte safe)
-                emit({"type": "token", "text": delta, "step": step})
+                emit({"type": "token", "text": delta, "step": step, "live": live.push(int(chosen))})
 
         t0 = time.time()
         if backend == "mlx":
@@ -202,13 +231,17 @@ class StreamReq(BaseModel):
     temperature: float = Field(1.0, gt=0, le=2)
     top_p: float = Field(1.0, gt=0, le=1)
     max_new_tokens: int = Field(300, ge=1, le=1024)
-    trace: bool = True
+    trace: bool = True  # per-step sampler details for the visualizer (/static/sampler-demo.html)
 
 
-def add_stream_route(app, engine: Engine, watermarker_for: Callable[[str], Watermarker]):
+def add_stream_route(app, engine: Engine, watermarker_for: Callable[[str], Watermarker], flag_p: float = 1e-5):
     """POST /api/stream → newline-delimited JSON events:
-    {"type":"start","model":..,"loading":bool}, {"type":"token","text":..,"step":{..}}…,
-    then {"type":"done", ...result} or {"type":"error","detail":..}."""
+    {"type":"start","model":..,"loading":bool,"flag_p":..},
+    {"type":"token","text":..,"step":{..}|null,"live":{"s","p","n","z"}}…,
+    then {"type":"done", ...result} or {"type":"error","detail":..}.
+
+    ``live`` is the generating model's detector test on the reply so far; ``flag_p``
+    is the whole-text p-value below which the checker calls a match."""
 
     @app.post("/api/stream")
     def stream(req: StreamReq):
@@ -228,7 +261,7 @@ def add_stream_route(app, engine: Engine, watermarker_for: Callable[[str], Water
             events.put(None)
 
         events.put({"type": "start", "model": name, "loading": not engine.loaded(name),
-                    "context_width": wm.context_width})
+                    "context_width": wm.context_width, "flag_p": flag_p})
         engine.worker.submit(work)
 
         def gen():

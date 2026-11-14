@@ -174,6 +174,22 @@
   #heat span.inspan { box-shadow: inset 0 -2px 0 var(--span-c); }
   .heat-for { font: 500 12px var(--mono); color: var(--muted); text-transform: none; letter-spacing: 0; margin-left: auto; }
 
+  /* ---------- live evidence curve ---------- */
+  .curve { border: 1px solid var(--line); border-top: 0; background: var(--bg); }
+  .curve .rank-h span:last-child { text-transform: none; letter-spacing: 0; font: 500 12px var(--mono); color: var(--ink); }
+  .curve .rank-h sup { font-size: 0.7em; }
+  #curveSvg { display: block; width: 100%; height: 150px; }
+  #curveSvg .axis { stroke: var(--hair); stroke-width: 1; }
+  #curveSvg .thr { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 4; opacity: .55; }
+  #curveSvg .area { fill: var(--ink); opacity: .07; }
+  #curveSvg .ln { fill: none; stroke: var(--ink); stroke-width: 1.75; stroke-linejoin: round; }
+  #curveSvg .dot { fill: var(--ink); }
+  #curveSvg .cross { stroke: var(--ink); stroke-width: 1; }
+  #curveSvg text { font: 11px var(--mono); fill: var(--muted); }
+  #heat span.fresh { animation: fresh .6s ease-out; }
+  @keyframes fresh { from { color: var(--muted); } }
+  @media (prefers-reduced-motion: reduce) { #heat span.fresh { animation: none; } }
+
   .spin { width: 10px; height: 10px; border: 1.5px solid currentColor; border-right-color: transparent; display: none; animation: r .7s linear infinite; border-radius: 50%; }
   .busy .spin { display: inline-block; }
   @keyframes r { to { transform: rotate(360deg); } }
@@ -236,6 +252,10 @@
         <div class="stat"><b id="sP">—</b><span>Chance of a fluke</span></div>
         <div class="stat"><b id="sZ">—</b><span>Z-score</span></div>
         <div class="stat"><b id="sN">—</b><span>Tokens scored</span></div>
+      </div>
+      <div class="curve" id="curve" hidden>
+        <div class="rank-h"><span id="curveTitle">Evidence while generating</span><span id="curveNow"></span></div>
+        <svg id="curveSvg" role="img" aria-label="Evidence for the fingerprint as each token was generated"></svg>
       </div>
       <div class="rank" id="rank"><div class="rank-h"><span>Which model?</span><span>chance of a fluke</span></div><div id="rankRows"></div></div>
     </section>

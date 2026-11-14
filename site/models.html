@@ -23,6 +23,8 @@
 .matrix td { width: 56px; height: 44px; min-width: 44px; }
 .matrix td.yes { background: var(--ink); color: var(--bg); }
 .matrix td.no { color: var(--faint); }
+.matrix td.lean { background: color-mix(in srgb, var(--ink) 45%, var(--bg)); color: var(--bg); }
+.matrix td small { display: block; font-size: 10px; font-weight: 500; opacity: .8; margin-top: 1px; }
 .matrix td.bad { background: repeating-linear-gradient(-45deg, var(--bg) 0 4px, var(--ink) 4px 5px); color: var(--ink); font-weight: 700; }
 .key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .key i { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--line); vertical-align: -2px; margin-right: 6px; }
@@ -34,12 +36,11 @@
   <div class="top">
     <a class="brand" href="index.html"><i></i>Ripple Fingerprint</a>
     <nav class="top-right" aria-label="Demo">
-      <a class="btn" href="proofs.html">Algorithmic watermarking</a>
       <a class="btn" href="/">Open the live demo ↗</a>
       <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Dark</button>
     </nav>
   </div>
-  <nav class="story" aria-label="Story"><a href="/"><b>Step 1</b><span>Try the live demo</span></a><a href="model-card.html"><b>Step 2</b><span>What it is</span></a><a href="index.html"><b>Step 3</b><span>Does it work?</span></a><a href="models.html" aria-current="page"><b>Step 4</b><span>Every model</span></a></nav>
+  <nav class="story" aria-label="Story"><a href="/"><b>Step 1</b><span>Try the live demo</span></a><a href="model-card.html"><b>Step 2</b><span>What it is</span></a><a href="index.html"><b>Step 3</b><span>Does it work?</span></a><a href="models.html" aria-current="page"><b>Step 4</b><span>Every model</span></a><a href="proofs.html"><b>Addendum</b><span>Algorithmic watermarking</span></a></nav>
 
   <div class="hero">
     <div class="hero-card">
@@ -61,11 +62,11 @@
     <div class="gap"></div>
     <div class="block">
       <div class="label"><b>01</b>The grid</div>
-      <h2 class="q">Was any model blamed for another's text?</h2>
+      <h2 class="q">Which model did the checker think wrote each reply?</h2>
       <p class="answer" id="a-grid"></p>
-      <p class="lead" id="lead-grid">Rows: who wrote it. Columns: whose key checked it. Black squares should sit only on the diagonal.</p>
+      <p class="lead" id="lead-grid">Rows: who wrote it. Columns: the model whose key scored highest, the checker's best guess. Every guess should sit on the diagonal. "sure" counts the guesses strong enough to name the model outright.</p>
       <div class="tablewrap"><table class="matrix" id="matrix"></table></div>
-      <div class="key"><span><i style="background:var(--ink)"></i>recognised by its own key</span><span><i></i>no match</span><span><i style="background:repeating-linear-gradient(-45deg,var(--bg) 0 4px,var(--ink) 4px 5px)"></i>wrong model matched</span></div>
+      <div class="key"><span><i style="background:var(--ink)"></i>right guess, every one sure</span><span><i style="background:color-mix(in srgb,var(--ink) 45%,var(--bg))"></i>right guess, some too weak to be sure</span><span><i></i>never guessed</span><span><i style="background:repeating-linear-gradient(-45deg,var(--bg) 0 4px,var(--ink) 4px 5px)"></i>wrong model guessed</span></div>
     </div>
 
     <div class="gap"></div>
@@ -112,6 +113,9 @@ const byModel = M.map(m => L.runs.filter(r => r.model === m.name));
 const named = r => r.best === r.model && r.matches.length === 1 && r.matches[0] === r.model;
 const total = L.runs.length, nNamed = L.runs.filter(named).length;
 const wrong = L.runs.filter(r => r.matches.some(x => x !== r.model)).length;
+// The checker's best guess: the key with the highest score, whether or not it cleared the bar.
+const guess = r => M[r.z.indexOf(Math.max(...r.z))].name;
+const rightGuess = L.runs.filter(r => guess(r) === r.model).length;
 
 const v = $("verdict"); v.classList.remove("wait");
 v.innerHTML = `<b>${nNamed} of ${total}</b><p>replies were traced to the right model. ${wrong === 0 ? "None was ever blamed on the wrong one." : `${wrong} matched the wrong model.`}</p>`;
@@ -122,10 +126,12 @@ let h = `<thead><tr><th class="who">wrote ↓ · key →</th>${M.map((_, j) => `
 M.forEach((m, i) => {
   h += `<tr><th class="who">${i + 1} · ${esc(m.label)}</th>`;
   M.forEach((k, j) => {
-    const n = byModel[i].filter(r => r.matches.includes(k.name)).length, of = byModel[i].length;
-    const cls = n === 0 ? "no" : i === j ? "yes" : "bad";
-    // On the diagonal always show the count, so a miss reads as "2/6" rather than vanishing.
-    h += `<td class="${cls}" title="${esc(m.label)}'s replies checked with ${esc(k.label)}'s key: ${n} of ${of} recognised">${n === 0 && i !== j ? "·" : `${n}/${of}`}</td>`;
+    const g = byModel[i].filter(r => guess(r) === k.name), n = g.length, of = byModel[i].length;
+    const sure = g.filter(r => r.matches.includes(k.name)).length;
+    const cls = n === 0 ? "no" : i !== j ? "bad" : sure === n ? "yes" : "lean";
+    const tip = `${esc(m.label)}'s replies: ${n} of ${of} scored highest under ${esc(k.label)}'s key, ${sure} of them strongly enough to be sure`;
+    // On the diagonal always show the count, so a miss reads as "0/6" rather than vanishing.
+    h += `<td class="${cls}" title="${tip}">${n === 0 && i !== j ? "·" : `${n}/${of}${sure < n ? `<small>${sure} sure</small>` : ""}`}</td>`;
   });
   h += "</tr>";
 });
@@ -143,7 +149,9 @@ $("table").innerHTML = t + "</tbody>";
 const zs = M.map((m, i) => [m.label, median(byModel[i].map(r => r.z[i])), byModel[i].filter(named).length, byModel[i].length]).sort((x, y) => y[1] - x[1]);
 const missed = M.map((m, i) => [m.label, byModel[i].filter(r => r.matches.includes(m.name)).length, byModel[i].length]).filter(x => x[1] < x[2]);
 const offCells = N * (N - 1);
-$("a-grid").textContent = wrong === 0 ? "No, never." : `Yes, ${wrong} times.`;
+$("a-grid").textContent = rightGuess === total
+  ? `The right one, all ${total} times.${wrong === 0 ? " No reply was ever pinned on the wrong model." : ""}`
+  : `The right one ${rightGuess} of ${total} times.${wrong === 0 ? " None was ever confidently pinned on the wrong model." : ` ${wrong} were confidently pinned on the wrong model.`}`;
 const weak = zs.filter(z => z[2] < z[3]);
 $("a-table").textContent = weak.length ? `All clear, except ${weak.map(z => `${z[0]} (${z[2]} of ${z[3]} caught)`).join(" and ")}.` : "All clear for every model.";
 

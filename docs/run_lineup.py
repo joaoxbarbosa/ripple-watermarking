@@ -2,6 +2,7 @@
 
     .venv/bin/python -m demo.server &          # the demo server must be running
     .venv/bin/python docs/run_lineup.py [http://localhost:8000]
+    .venv/bin/python docs/run_lineup.py --only gemma   # rerun matching models, keep the rest
 
 Writes site/models.js (``window.LINEUP = {...}``) for site/models.html.
 """
@@ -17,7 +18,10 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+ARGS = sys.argv[1:]
+ONLY = ARGS[ARGS.index("--only") + 1] if "--only" in ARGS else None
+_pos = [a for i, a in enumerate(ARGS) if not a.startswith("--") and (i == 0 or ARGS[i - 1] != "--only")]
+BASE = _pos[0] if _pos else "http://localhost:8000"
 PROMPTS = [
     "Write a short story about a lighthouse keeper.",
     "Explain how vaccines work.",
@@ -50,8 +54,15 @@ def main():
     info = call("/api/info")
     models = [{"name": m["name"], "label": m["label"].removeprefix("LM Studio · ")} for m in info["models"]]
     names = [m["name"] for m in models]
+    dest = ROOT / "site/models.js"
     runs = []
+    if ONLY:  # keep the saved runs of every other model
+        old = json.loads(dest.read_text().removeprefix("window.LINEUP = ").rstrip().rstrip(";"))
+        assert [m["name"] for m in old["models"]] == names, "model list changed: run the full lineup"
+        runs = [r for r in old["runs"] if ONLY not in r["model"]]
     for i, m in enumerate(models):
+        if ONLY and ONLY not in m["name"]:
+            continue
         for j, prompt in enumerate(PROMPTS):
             g = call("/api/generate", {"model": m["name"], "prompt": prompt, "watermark": True, **SETTINGS})
             d = call("/api/detect", {"text": g["text"]})
@@ -67,9 +78,9 @@ def main():
             ok = d["best"] == m["name"] and d["matches"] == [m["name"]]
             print(f"[{i + 1}/{len(models)}] {m['label'][:34]:34} {j + 1}/{len(PROMPTS)} "
                   f"own z={runs[-1]['z'][i]:6.2f} {'named' if ok else 'MISSED'}", flush=True)
+    runs.sort(key=lambda r: (names.index(r["model"]), PROMPTS.index(r["prompt"])))
     out = {"generated": time.strftime("%Y-%m-%d"), "fpr": info["fpr"], "settings": SETTINGS,
            "prompts": PROMPTS, "models": models, "runs": runs}
-    dest = ROOT / "site/models.js"
     dest.parent.mkdir(exist_ok=True)
     dest.write_text("window.LINEUP = " + json.dumps(out, separators=(",", ":")) + ";\n")
     print("wrote", dest)

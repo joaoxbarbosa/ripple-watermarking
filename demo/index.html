@@ -33,7 +33,7 @@
   .toplink:hover { background: var(--ink); color: var(--bg); }
   .theme { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 10px; }
   .top-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .story { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--bg); margin-top: 20px; }
+  .story { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--bg); margin-top: 20px; }
   .story a { display: grid; gap: 2px; justify-items: center; text-align: center; padding: 12px 16px; text-decoration: none; color: var(--ink); border-right: 1px solid var(--line); transition: background .12s; }
   .story a:last-child { border-right: 0; }
   .story a b { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -41,7 +41,7 @@
   .story a:hover { background: var(--field); }
   .story a[aria-current="page"] { background: var(--ink); color: var(--bg); }
   .story a[aria-current="page"] b { color: var(--bg); opacity: .7; }
-  @media (max-width: 700px) { .story { grid-template-columns: 1fr 1fr; } .story a:nth-child(2) { border-right: 0; } .story a:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+  @media (max-width: 700px) { .story { grid-template-columns: 1fr 1fr; } .story a { border-bottom: 1px solid var(--line); } .story a:nth-child(even) { border-right: 0; } .story a:last-child { grid-column: 1 / -1; border-bottom: 0; } }
   .nextbar { display: block; border: 1px solid var(--line); margin-top: 40px; background: var(--ink); color: var(--bg); padding: 24px 28px; text-decoration: none; }
   .nextbar b { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .08em; opacity: .7; display: block; }
   .nextbar span { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; display: block; margin: 4px 0; }
@@ -247,13 +247,12 @@
   <div class="top">
     <div class="brand"><i></i>Ripple Fingerprint</div>
     <div class="top-right">
-      <a class="toplink" href="/results/proofs.html">Algorithmic watermarking</a>
       <div class="meta" id="model">loading model…</div>
       <button class="theme" id="theme" aria-label="Toggle dark mode">Dark</button>
     </div>
   </div>
 
-  <nav class="story" aria-label="Story"><a href="/" aria-current="page"><b>Step 1</b><span>Try the live demo</span></a><a href="/results/model-card.html"><b>Step 2</b><span>What it is</span></a><a href="/results/"><b>Step 3</b><span>Does it work?</span></a><a href="/results/models.html"><b>Step 4</b><span>Every model</span></a></nav>
+  <nav class="story" aria-label="Story"><a href="/" aria-current="page"><b>Step 1</b><span>Try the live demo</span></a><a href="/results/model-card.html"><b>Step 2</b><span>What it is</span></a><a href="/results/"><b>Step 3</b><span>Does it work?</span></a><a href="/results/models.html"><b>Step 4</b><span>Every model</span></a><a href="/results/proofs.html"><b>Addendum</b><span>Algorithmic watermarking</span></a></nav>
 
   <div class="hero">
     <div class="hero-card">

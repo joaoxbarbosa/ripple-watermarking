@@ -185,7 +185,7 @@
     // ---------- state
     let which = traces.watermarked ? "watermarked" : "plain";
     let trace = traces[which];
-    let i = 0, playing = false, speed = 2, timer = null, raf = null, token = 0;
+    let i = 0, playing = false, speed = 2, timer = null, raf = null, token = 0, live = false;
     let cum = []; // cumulative evidence per step (null for skipped)
 
     function rebuildCum() {
@@ -215,8 +215,9 @@
       noKey.setAttribute("aria-pressed", which === "plain");
       withKey.disabled = !traces.watermarked; noKey.disabled = !traces.plain;
       speeds.forEach((b) => b.setAttribute("aria-pressed", +b.dataset.s === speed));
-      play.textContent = playing ? "Pause" : i >= trace.steps.length - 1 ? "Replay" : "Play";
-      scrub.max = trace.steps.length - 1; scrub.value = i;
+      play.textContent = live ? "Live" : playing ? "Pause" : i >= trace.steps.length - 1 ? "Replay" : "Play";
+      [play, prev, next, restart, scrub].forEach((c) => (c.disabled = live));
+      scrub.max = Math.max(0, trace.steps.length - 1); scrub.value = i;
     }
 
     function renderText(upto, ghostLast) {
@@ -304,8 +305,18 @@
       return T.map((Tj) => (t * Tw) / Tj);
     }
 
+    function empty(msg) {
+      stepTxt.textContent = "Step 0"; badge.textContent = live ? "Live" : "—"; badge.className = "sv-badge" + (live ? " keyed" : "");
+      modeTxt.textContent = msg; ent.textContent = ""; ctx.replaceChildren();
+      lanes.forEach((L) => (L.lane.style.visibility = "hidden"));
+      text.replaceChildren(el("span", "warm", msg));
+      line.setAttribute("d", ""); band.setAttribute("d", "");
+      setButtons();
+    }
+
     // Show step i fully settled (no animation).
     function snap() {
+      if (!trace.steps.length) return empty(live ? "Waiting for the first token…" : "No steps.");
       const st = trace.steps[i];
       const E = drawsFor(st);
       renderHeader(st);
@@ -393,10 +404,46 @@
     noKey.onclick = () => switchTo("plain");
     addEventListener("resize", () => { if (!playing) snap(); });
 
+    // Live: each streamed step runs a quick race as it arrives (the model is faster
+    // than the full animation); a new token cancels the previous race.
+    function quick() {
+      const my = ++token;
+      const st = trace.steps[i];
+      const E = drawsFor(st);
+      renderHeader(st);
+      renderText(i, false);
+      renderChart(i);
+      setButtons();
+      if (reduced()) return renderLanes(st, E, positions(st, E, 1), true);
+      const t0 = performance.now(), ms = 110;
+      const frame = (now) => {
+        if (my !== token) return;
+        const f = Math.min(1, (now - t0) / ms);
+        renderLanes(st, E, positions(st, E, f), f >= 1);
+        if (f < 1) raf = requestAnimationFrame(frame);
+      };
+      raf = requestAnimationFrame(frame);
+    }
+
     rebuildCum(); snap();
     return {
-      load(newTraces) { stop(); traces = newTraces; which = traces.watermarked ? "watermarked" : "plain"; trace = traces[which]; i = 0; rebuildCum(); snap(); },
+      load(newTraces) { stop(); live = false; traces = newTraces; which = traces.watermarked ? "watermarked" : "plain"; trace = traces[which]; i = 0; rebuildCum(); snap(); },
       play() { if (!playing) play.onclick(); },
+      /** Start a live stream. ``watermark`` picks which side the steps belong to. */
+      startLive(contextWidth, watermark = true) {
+        stop(); live = true;
+        which = watermark ? "watermarked" : "plain";
+        trace = { steps: [], context_width: contextWidth || 3 };
+        traces = { [which]: trace };
+        i = 0; rebuildCum(); snap();
+      },
+      push(step) {
+        if (!live || !step) return;
+        trace.steps.push(step); rebuildCum();
+        i = trace.steps.length - 1; quick();
+      },
+      /** Stream finished: hand control back for slow replays. */
+      endLive() { if (!live) return; live = false; token++; i = Math.max(0, trace.steps.length - 1); snap(); },
     };
   }
 

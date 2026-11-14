@@ -79,8 +79,10 @@ def test_wrong_key_does_not_detect(wm):
 
 
 def test_same_prompt_gives_diverse_outputs(wm):
+    # Two replies can still coincide (~2^-8 per pair, set by the entropy gate);
+    # without the gate all 20 would be identical.
     outs = {tuple(generate(wm, [5, 5, 5, 5], 40)) for _ in range(20)}
-    assert len(outs) == 20
+    assert len(outs) >= 18
 
 
 def _edit(toks, rng, sub=0.0, ins=0.0, dele=0.0):

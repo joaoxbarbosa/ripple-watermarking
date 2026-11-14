@@ -35,16 +35,32 @@
   button:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: var(--bg); }
   button:disabled { opacity: .4; cursor: default; }
   input[type=range] { accent-color: var(--ink); }
-  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 28px; }
   .meta { font: 12px var(--mono); color: var(--muted); }
+  .live { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto auto; gap: 8px; margin: 0 0 22px; }
+  .live select, .live input[type=text] { font: 13px var(--sans); color: var(--ink); background: var(--field); border: 1px solid var(--line); padding: 10px 12px; min-width: 0; }
+  .live select { font-family: var(--mono); -webkit-appearance: none; appearance: none; }
+  .live label { display: flex; align-items: center; gap: 8px; font-size: 13px; border: 1px solid var(--line); padding: 0 12px; white-space: nowrap; cursor: pointer; }
+  .live label input { accent-color: var(--ink); }
+  .live button.go { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; padding: 10px 18px; }
+  .live button.go:hover:not(:disabled) { background: var(--bg); color: var(--ink); }
+  .status { font: 12px var(--mono); color: var(--muted); margin: -12px 0 22px; min-height: 18px; }
+  @media (max-width: 760px) { .live { grid-template-columns: 1fr 1fr; } .live select, .live input[type=text] { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><span class="meta">Recorded from Qwen3-VL-4B-Instruct (MLX) · "Write a short story about a lighthouse keeper."</span>
+  <div class="top"><span class="meta" id="meta">Example recorded from Qwen3-VL-4B-Instruct (MLX) · "Write a short story about a lighthouse keeper."</span>
     <button id="theme">Toggle theme</button></div>
   <h1>Inside the sampler</h1>
-  <p class="sub">Watch each token get picked. The fingerprint never changes what the model wants. It only decides which random draws the race uses.</p>
+  <p class="sub">Watch each token get picked, live as the model streams it. The fingerprint never changes what the model wants. It only decides which random draws the race uses.</p>
+  <div class="live">
+    <select id="model" aria-label="Model"></select>
+    <input type="text" id="prompt" aria-label="Prompt" value="Write a short story about a lighthouse keeper.">
+    <label><input type="checkbox" id="wm" checked> Fingerprint</label>
+    <button class="go" id="go">Stream →</button>
+  </div>
+  <div class="status" id="status"></div>
   <div id="viz"></div>
 </div>
 <script src="/static/sampler.js"></script>
@@ -53,7 +69,52 @@
     const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     r.dataset.theme = dark ? "light" : "dark";
   };
-  fetch("/static/sampler-trace.json").then(r => r.json()).then(t => SamplerViz.mount(document.getElementById("viz"), t));
+  const $ = (id) => document.getElementById(id);
+  let viz = null;
+  fetch("/static/sampler-trace.json").then(r => r.json()).then(t => (viz = SamplerViz.mount($("viz"), t)));
+  fetch("/api/info").then(r => r.json()).then(i => {
+    for (const m of i.models) { const o = document.createElement("option"); o.value = m.name; o.textContent = m.label || m.name; $("model").appendChild(o); }
+    $("model").value = i.default;
+  }).catch(() => ($("status").textContent = "Streaming needs the demo server's /api/stream."));
+
+  // POST /api/stream returns one JSON event per line, as tokens are produced.
+  $("go").onclick = async () => {
+    if (!viz) return;
+    $("go").disabled = true;
+    const watermark = $("wm").checked, label = $("model").selectedOptions[0]?.textContent || "";
+    $("status").textContent = "Starting…";
+    let n = 0, t0 = 0;
+    try {
+      const r = await fetch("/api/stream", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: $("model").value, prompt: $("prompt").value, watermark, max_new_tokens: 200 }) });
+      if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+      const reader = r.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const ev = JSON.parse(buf.slice(0, nl)); buf = buf.slice(nl + 1);
+          if (ev.type === "start") {
+            viz.startLive(ev.context_width, watermark);
+            $("status").textContent = ev.loading ? `Loading ${label}…` : "Generating…";
+            $("meta").textContent = `Live · ${label} · "${$("prompt").value}"`;
+          } else if (ev.type === "token") {
+            if (!n) t0 = performance.now();
+            n += 1; viz.push(ev.step);
+            const dt = (performance.now() - t0) / 1000;
+            $("status").textContent = `Streaming · ${n} tokens${dt > 0.3 ? ` · ${(n / dt).toFixed(0)} tok/s` : ""}`;
+          } else if (ev.type === "done") {
+            viz.endLive();
+            $("status").textContent = `Done · ${n} tokens in ${ev.seconds}s${ev.load_seconds > 1 ? ` (+${ev.load_seconds}s load)` : ""} · press Replay to watch it slowly`;
+          } else if (ev.type === "error") throw new Error(ev.detail);
+        }
+      }
+    } catch (e) { viz.endLive(); $("status").textContent = `Error: ${e.message}`; }
+    $("go").disabled = false;
+  };
 </script>
 </body>
 </html>

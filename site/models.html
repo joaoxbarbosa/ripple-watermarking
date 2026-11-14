@@ -1,226 +1,144 @@
 <!doctype html>
 <html lang="en">
-<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Every Model, Every Key</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
 <style>
-/* Same tokens as index.html so the two pages read as one site. */
-:root {
-  --bg: #f7f8fa; --panel: #ffffff; --ink: #0f1420; --ink-2: #4a5263; --muted: #8189a0;
-  --rule: #e2e5ec; --accent: #2a78d6; --null: #dfe2e8; --good: #1a7f4b; --bad: #c4482a;
-  --heat-rgb: 42,120,214;
-  --display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
-  --body: "Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-}
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0e1117; --panel: #161a22; --ink: #eef0f4; --ink-2: #b4bac8; --muted: #7d8598;
-  --rule: #272c38; --accent: #3987e5; --null: #2b303c; --good: #3fb37a; --bad: #e0704f;
-  --heat-rgb: 57,135,229; color-scheme: dark;
-} }
-:root[data-theme="dark"] {
-  --bg: #0e1117; --panel: #161a22; --ink: #eef0f4; --ink-2: #b4bac8; --muted: #7d8598;
-  --rule: #272c38; --accent: #3987e5; --null: #2b303c; --good: #3fb37a; --bad: #e0704f;
-  --heat-rgb: 57,135,229; color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--body); }
-.wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 80px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
-h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.05; font-weight: 700; }
-h2 { font-size: 1.5rem; line-height: 1.2; font-weight: 600; }
-h3 { font-size: 1.05rem; font-weight: 600; }
-p { margin: 0; max-width: 68ch; }
-a { color: var(--accent); }
-nav { display: flex; gap: 18px; font: 500 13px var(--mono); margin-bottom: 36px; flex-wrap: wrap; }
-nav a { color: var(--ink-2); text-decoration: none; padding-bottom: 3px; border-bottom: 2px solid transparent; }
-nav a[aria-current="page"] { color: var(--ink); border-color: var(--ink); }
-.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.lede { font-size: 1.12rem; color: var(--ink-2); }
-.stack { display: grid; gap: 12px; }
-header { display: grid; gap: 20px; }
-section { display: grid; gap: 18px; padding-top: 56px; }
-.muted { color: var(--muted); }
-.note { font-size: 13px; color: var(--muted); }
-.meta { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { font: 500 12px/1 var(--mono); padding: 7px 10px; border: 1px solid var(--rule); border-radius: 999px; color: var(--ink-2); background: var(--panel); }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
-.stat { background: var(--panel); padding: 18px; display: grid; gap: 6px; align-content: start; }
-.stat b { font: 600 2rem/1 var(--display); font-variant-numeric: tabular-nums; }
-.stat span { font-size: 13px; color: var(--ink-2); line-height: 1.35; }
-.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; min-width: 0; position: relative; }
-.tablewrap { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
-th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
-th { font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-td.num, th.num { text-align: right; font-family: var(--mono); }
-tr:last-child td { border-bottom: 0; }
-.pill { display: inline-block; font: 500 12px/1 var(--mono); padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; }
-.pill.ok { color: var(--good); } .pill.no { color: var(--bad); }
-/* matrix */
-.matrix td.cell { text-align: center; font: 500 12.5px var(--mono); padding: 10px 6px; min-width: 64px; border: 1px solid var(--panel); }
-.matrix td.cell.off { color: var(--muted); }
-.matrix th.key { text-align: center; }
-.matrix td.who { font: 500 13px var(--mono); }
-.scale { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; margin-top: 12px; }
-.scale i { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, rgba(var(--heat-rgb),.08), rgba(var(--heat-rgb),.9)); border: 1px solid var(--rule); }
-/* strip plot */
-.panel svg { display: block; width: 100%; height: auto; overflow: visible; }
-.panel text { fill: var(--ink-2); font: 400 11px var(--body); }
-.panel text.lab { fill: var(--ink); font: 500 12px var(--mono); }
-.grid line { stroke: var(--rule); }
-.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font: 500 12px/1.4 var(--mono); padding: 6px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; transition: opacity .08s; z-index: 2; }
-figure { margin: 0; display: grid; gap: 10px; }
-figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--rule); display: block; }
-code { font: 13.5px var(--mono); background: var(--null); padding: 1px 5px; border-radius: 4px; }
-footer { padding-top: 56px; font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* One question, one answer: a big verdict, a simple who-wrote × which-key grid, and one row per model. */
+.verdict { border: 1px solid var(--line); background: var(--ink); color: var(--bg); padding: 28px; display: grid; gap: 8px; }
+.verdict b { font: 500 44px/1 var(--mono); letter-spacing: -0.04em; }
+.verdict p { font-size: 16px; opacity: .8; }
+.verdict.wait { background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--hatch) 6px 7px); color: var(--ink); }
+.verdict.wait p { opacity: 1; color: var(--muted); }
+.verdict.wait b { font-size: 26px; }
+.matrix { border-collapse: collapse; font: 500 13px var(--mono); }
+.matrix th, .matrix td { border: 1px solid var(--line); padding: 0; text-align: center; }
+.matrix th { font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; }
+.matrix th.who { text-align: left; color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.matrix td { width: 56px; height: 44px; min-width: 44px; }
+.matrix td.yes { background: var(--ink); color: var(--bg); }
+.matrix td.no { color: var(--faint); }
+.matrix td.bad { background: repeating-linear-gradient(-45deg, var(--bg) 0 4px, var(--ink) 4px 5px); color: var(--ink); font-weight: 700; }
+.key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.key i { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--line); vertical-align: -2px; margin-right: 6px; }
+.bar { height: 8px; border: 1px solid var(--line); background: var(--bg); width: 120px; display: inline-block; vertical-align: middle; }
+.bar > span { display: block; height: 100%; background: var(--ink); }
+.shot { border: 1px solid var(--line); display: block; width: 100%; height: auto; }
 </style>
-</head>
-<body>
+
 <div class="wrap">
-  <nav aria-label="Pages"><a href="/">Demo</a><a href="index.html">Results</a><a href="models.html" aria-current="page">Every model</a></nav>
-  <header>
-    <div class="eyebrow">ripple-fingerprint · model lineup</div>
-    <h1>Every model, every key</h1>
-    <p class="lede" id="lede"></p>
-    <div class="meta" id="meta"></div>
-  </header>
+  <div class="top">
+    <a class="brand" href="index.html"><i></i>Ripple Fingerprint</a>
+    <nav class="top-right" aria-label="Pages">
+      <a class="btn" href="index.html">Results</a>
+      <a class="btn" href="models.html" aria-current="page">Every model</a>
+      <a class="btn" href="model-card.html">Model card</a>
+      <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Dark</button>
+    </nav>
+  </div>
 
-  <section aria-labelledby="sum-h">
-    <h2 id="sum-h" class="sr" hidden>Summary</h2>
-    <div class="stats" id="stats"></div>
-  </section>
-
-  <section aria-labelledby="mx-h">
-    <div class="stack">
-      <h2 id="mx-h">Who wrote it × which key</h2>
-      <p class="muted">Each row is one model's replies. Each column is one model's key. A cell shows the median p-value, corrected across all keys, when that model's replies are checked with that key. Only the diagonal should light up.</p>
+  <div class="hero">
+    <div class="hero-card">
+      <div class="label"><b>Every model</b>who wrote it?</div>
+      <h1>Can it tell the models apart?</h1>
+      <p class="sub">Each model signs its text with its own key. We asked every model the same questions, then checked every reply against every key. A reply should only match the key of the model that wrote it.</p>
+      <div class="chips" id="meta"></div>
     </div>
-    <div class="panel">
+  </div>
+
+  <div class="verdict wait" id="verdict">
+    <b>Waiting for data</b>
+    <p>The lineup hasn't been run yet. Start the demo (<code>.venv/bin/python -m demo.server</code>), then run <code>docs/run_lineup.py</code>. It writes <code>site/models.js</code>, and this page fills in.</p>
+  </div>
+
+  <div id="body" hidden>
+    <div class="gap"></div>
+    <div class="block">
+      <div class="label"><b>01</b>Who wrote it × which key matched</div>
+      <p class="lead">Rows are the model that wrote the replies. Columns are the key used to check them. A filled square means the replies matched that key. Only the diagonal should be filled.</p>
       <div class="tablewrap"><table class="matrix" id="matrix"></table></div>
-      <div class="scale"><span>ordinary text</span><i></i><span>p ≤ 10⁻⁵⁰</span><span>· = above 0.01</span></div>
+      <div class="key"><span><i style="background:var(--ink)"></i>matched (count of replies)</span><span><i></i>no match</span><span><i style="background:repeating-linear-gradient(-45deg,var(--bg) 0 4px,var(--ink) 4px 5px)"></i>wrong model named</span></div>
     </div>
-  </section>
 
-  <section aria-labelledby="st-h">
-    <div class="stack">
-      <h2 id="st-h">How strong the evidence is, reply by reply</h2>
-      <p class="muted">Each dot is one reply checked with its own model's key. Left of the line is below the threshold, so the model is named. Confident chat models give fewer random choices per token for the fingerprint to ride on, so their dots sit closer to the line.</p>
+    <div class="gap"></div>
+    <div class="block">
+      <div class="label"><b>02</b>Each model</div>
+      <p class="lead">"Signal strength" is how far the signed replies stand out from ordinary text (z-score). About 5 is enough to name a model. Confident chat models make fewer random choices, so their signal is weaker.</p>
+      <div class="tablewrap"><table id="table"></table></div>
     </div>
-    <div class="panel"><svg id="strip" role="img" aria-label="Own-key p-value of every reply, grouped by model"></svg><div class="tip" id="tip"></div></div>
-  </section>
+  </div>
 
-  <section aria-labelledby="tb-h">
-    <h2 id="tb-h">Per model</h2>
-    <div class="panel"><div class="tablewrap"><table id="table"></table></div></div>
-    <p class="note">"Strongest wrong key" is the highest z-score any other model's key reached on this model's replies. Ordinary text scores around 0, and a match needs roughly z ≥ 5.</p>
-  </section>
+  <div class="gap"></div>
+  <div class="block">
+    <div class="label"><b>03</b>The same check, live in the demo</div>
+    <p class="lead">Section 04 of the demo, "Run every model", sends one prompt to every model and fills in this grid as the answers come back.</p>
+    <img class="shot" src="img/every-model.webp" alt="The demo's who-wrote × which-key grid for eight models: only the diagonal is filled">
+  </div>
 
-  <section aria-labelledby="demo-h">
-    <div class="stack">
-      <h2 id="demo-h">The same check in the demo</h2>
-      <p class="muted">Section 04 of the demo, "Run every model", runs one prompt through every model and fills in this matrix live.</p>
-    </div>
-    <figure>
-      <img src="../docs/every-model.webp" alt="The demo's who-wrote × which-key matrix for eight models: only the diagonal lights up and every model is named" loading="lazy">
-      <figcaption class="note">One prompt, eight models, from the demo website.</figcaption>
-    </figure>
-  </section>
+  <div class="cta">
+    <div><strong>How it works, in plain words</strong><span>What it's for, how reliable it is, and what breaks it.</span></div>
+    <a class="btn" href="model-card.html">Open the model card →</a>
+  </div>
 
   <footer>
     <div id="foot"></div>
-    <div>Reproduce: start the demo with <code>.venv/bin/python -m demo.server</code>, then run <code>docs/run_lineup.py</code>.</div>
+    <div>Reproduce: start the demo with .venv/bin/python -m demo.server, then run docs/run_lineup.py.</div>
   </footer>
 </div>
 
-<script src="models.js"></script>
 <script>
 (() => {
-const L = window.LINEUP;
-const $ = (id) => document.getElementById(id);
-if (!L) { $("lede").textContent = "No data yet: run docs/run_lineup.py to create site/models.js."; return; }
-const NS = "http://www.w3.org/2000/svg";
-const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
-const median = (a) => { const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const sup = (s) => String(s).replace(/-/g, "−").split("").map(c => ({"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","−":"⁻"})[c] || c).join("");
-const pexp = (l10) => l10 <= -299 ? "<10⁻³⁰⁰" : `10${sup(Math.round(l10))}`;
-const esc = (s) => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
-
-const M = L.models, N = M.length, thr = Math.log10(L.fpr);
-const idx = Object.fromEntries(M.map((m, i) => [m.name, i]));
-const byModel = M.map((m) => L.runs.filter(r => r.model === m.name));
-const named = (r) => r.best === r.model && r.matches.length === 1 && r.matches[0] === r.model;
-const wrong = L.runs.filter(r => r.matches.some(x => x !== r.model)).length;
+  const root = document.documentElement, b = document.getElementById("theme");
+  try { const t = localStorage.getItem("fp-theme"); if (t) root.dataset.theme = t; } catch {}
+  const dark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const label = () => { b.textContent = dark() ? "Light" : "Dark"; };
+  label();
+  b.onclick = () => { root.dataset.theme = dark() ? "light" : "dark"; try { localStorage.setItem("fp-theme", root.dataset.theme); } catch {} label(); };
+})();
+</script>
+<script src="models.js" onerror="void 0"></script>
+<script>
+(() => {
+const L = window.LINEUP; if (!L) return;
+const $ = id => document.getElementById(id);
+const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const esc = s => s.replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+const M = L.models, N = M.length, idx = Object.fromEntries(M.map((m, i) => [m.name, i]));
+const byModel = M.map(m => L.runs.filter(r => r.model === m.name));
+const named = r => r.best === r.model && r.matches.length === 1 && r.matches[0] === r.model;
 const total = L.runs.length, nNamed = L.runs.filter(named).length;
+const wrong = L.runs.filter(r => r.matches.some(x => x !== r.model)).length;
 
-$("lede").textContent = `${N} models, ${L.prompts.length} prompts each, every reply checked against all ${N} keys. ${nNamed}/${total} replies were named as the model that wrote them, and ${wrong === 0 ? "none was" : `${wrong} were`} pinned on a wrong model.`;
-$("meta").innerHTML = [`${N} models`, `${L.prompts.length} prompts`, `T=${L.settings.temperature} · top-p ${L.settings.top_p}`, `≤ ${L.settings.max_new_tokens} tokens`, `threshold p < 10${sup(Math.round(thr))}`, L.generated].map(t => `<span class="chip">${t}</span>`).join("");
+const v = $("verdict"); v.classList.remove("wait");
+v.innerHTML = `<b>${nNamed} of ${total}</b><p>replies were named as the model that wrote them. ${wrong === 0 ? "None was ever pinned on a different model." : `${wrong} matched a different model.`} ${N} models, ${L.prompts.length} questions each.</p>`;
+$("body").hidden = false;
+$("meta").innerHTML = [`${N} models`, `${L.prompts.length} prompts each`, `T=${L.settings.temperature}`, `≤ ${L.settings.max_new_tokens} tokens`, L.generated].map(t => `<span class="chip">${t}</span>`).join("");
 
-// ---------- stats
-const own = L.runs.map(r => r.log10_adj[idx[r.model]]);
-const strongestWrong = Math.max(...L.runs.map(r => Math.max(...r.z.filter((_, j) => j !== idx[r.model]))));
-const weakest = M.map((m, i) => [m.label, median(byModel[i].map(r => r.log10_adj[i]))]).sort((a, b) => b[1] - a[1])[0];
-$("stats").innerHTML = [
-  [`${nNamed}/${total}`, "replies named as the right model"],
-  [`${wrong}`, "replies blamed on a wrong model"],
-  [pexp(median(own)), "median corrected p-value with the right key"],
-  [strongestWrong.toFixed(1), "highest z-score under any wrong key (a match needs ≈ 5)"],
-].map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
-
-// ---------- matrix
-const cellBg = (l10) => { const t = Math.min(1, Math.max(0, -l10 / 50)); return `rgba(var(--heat-rgb),${(0.08 + 0.82 * Math.sqrt(t)).toFixed(3)})`; };
-let h = `<thead><tr><th>wrote ↓ · key →</th>${M.map((_, j) => `<th class="key" title="${esc(M[j].label)}">key ${j + 1}</th>`).join("")}</tr></thead><tbody>`;
+let h = `<thead><tr><th class="who">wrote ↓ · key →</th>${M.map((_, j) => `<th title="${esc(M[j].label)}">${j + 1}</th>`).join("")}</tr></thead><tbody>`;
 M.forEach((m, i) => {
-  h += `<tr><td class="who">${i + 1} · ${esc(m.label)}</td>`;
-  for (let j = 0; j < N; j++) {
-    const v = median(byModel[i].map(r => r.log10_adj[j]));
-    if (v > -2) h += `<td class="cell off" title="${esc(m.label)} checked with key ${j + 1}: p ${v.toFixed(2)} (log10)">·</td>`;
-    else { const dark = -v > 18; h += `<td class="cell" style="background:${cellBg(v)};${dark ? "color:#fff" : ""}" title="${esc(m.label)} checked with key ${j + 1}">${pexp(v)}</td>`; }
-  }
+  h += `<tr><th class="who">${i + 1} · ${esc(m.label)}</th>`;
+  M.forEach((k, j) => {
+    const n = byModel[i].filter(r => r.matches.includes(k.name)).length, of = byModel[i].length;
+    const cls = n === 0 ? "no" : i === j ? "yes" : "bad";
+    h += `<td class="${cls}" title="${esc(m.label)}'s replies checked with ${esc(k.label)}'s key: ${n} of ${of} matched">${n === 0 ? "·" : `${n}/${of}`}</td>`;
+  });
   h += "</tr>";
 });
 $("matrix").innerHTML = h + "</tbody>";
 
-// ---------- strip plot (x = -log10 p, log-ish scale)
-const svg = $("strip"), tip = $("tip");
-const rowH = 34, left = 250, right = 24, top = 26, Wd = 1000, Hd = top + rowH * N + 30;
-svg.setAttribute("viewBox", `0 0 ${Wd} ${Hd}`);
-const maxX = 300, sx = (l10) => left + (Wd - left - right) * Math.log10(1 + Math.min(maxX, -l10)) / Math.log10(1 + maxX);
-const g = el("g", { class: "grid" }, svg);
-[0, 1, 5, 10, 30, 100, 300].forEach(t => {
-  el("line", { x1: sx(-t), x2: sx(-t), y1: top - 8, y2: top + rowH * N }, g);
-  const tx = el("text", { x: sx(-t), y: top + rowH * N + 18, "text-anchor": "middle" }, svg); tx.textContent = t === 0 ? "1" : `10⁻${sup(t).replace("⁻", "")}`;
-});
-el("line", { x1: sx(thr), x2: sx(thr), y1: top - 12, y2: top + rowH * N, stroke: "var(--bad)", "stroke-dasharray": "4 3", "stroke-width": 1.5 }, svg);
-const tl = el("text", { x: sx(thr) + 6, y: top - 2 }, svg); tl.textContent = "threshold 10⁻⁵";
+let t = `<thead><tr><th>Model</th><th class="num">Named correctly</th><th>Signal strength</th><th class="num">Best wrong key</th><th class="num">Tokens per reply</th></tr></thead><tbody>`;
 M.forEach((m, i) => {
-  const y = top + rowH * i + rowH / 2;
-  const lb = el("text", { x: left - 14, y: y + 4, "text-anchor": "end", class: "lab" }, svg); lb.textContent = m.label.length > 30 ? m.label.slice(0, 29) + "…" : m.label;
-  byModel[i].forEach((r, k) => {
-    const v = r.log10_adj[i], ok = named(r);
-    const c = el("circle", { cx: sx(v), cy: y + (k - (byModel[i].length - 1) / 2) * 3, r: 6, fill: ok ? "var(--accent)" : "var(--panel)", stroke: ok ? "var(--accent)" : "var(--bad)", "stroke-width": 2, "fill-opacity": ok ? .75 : 1, tabindex: 0 }, svg);
-    const show = () => { const b = svg.getBoundingClientRect(), s = b.width / Wd; tip.textContent = `${r.prompt.slice(0, 40)} · p ${pexp(v)} · ${r.tokens} tokens${ok ? "" : " · missed"}`; tip.style.left = `${Math.min(sx(v) * s + 10, b.width - 280)}px`; tip.style.top = `${y * s - 34}px`; tip.style.opacity = 1; };
-    c.addEventListener("mouseenter", show); c.addEventListener("focus", show);
-    c.addEventListener("mouseleave", () => tip.style.opacity = 0); c.addEventListener("blur", () => tip.style.opacity = 0);
-  });
-});
-const xl = el("text", { x: (left + Wd - right) / 2, y: Hd - 2, "text-anchor": "middle" }, svg); xl.textContent = "corrected p-value with the model's own key (smaller is stronger)";
-
-// ---------- table
-let t = `<thead><tr><th>model</th><th class="num">named</th><th class="num">median p</th><th class="num">median z</th><th class="num">median tokens</th><th class="num">strongest wrong key (z)</th><th class="num">median time</th></tr></thead><tbody>`;
-M.forEach((m, i) => {
-  const rs = byModel[i], n = rs.filter(named).length;
+  const rs = byModel[i], n = rs.filter(named).length, z = median(rs.map(r => r.z[i]));
   const wz = Math.max(...rs.map(r => Math.max(...r.z.filter((_, j) => j !== i))));
-  t += `<tr><td>${esc(m.label)}</td><td class="num"><span class="pill ${n === rs.length ? "ok" : "no"}">${n}/${rs.length}</span></td><td class="num">${pexp(median(rs.map(r => r.log10_adj[i])))}</td><td class="num">${median(rs.map(r => r.z[i])).toFixed(1)}</td><td class="num">${median(rs.map(r => r.tokens))}</td><td class="num">${wz.toFixed(1)}</td><td class="num">${median(rs.map(r => r.seconds)).toFixed(1)}s</td></tr>`;
+  t += `<tr><td>${esc(m.label)}</td><td class="num"><span class="pill ${n === rs.length ? "ok" : "no"}">${n}/${rs.length}</span></td>` +
+    `<td><span class="bar"><span style="width:${Math.min(100, z / 30 * 100).toFixed(0)}%"></span></span> <span class="mono">${z.toFixed(1)}</span></td>` +
+    `<td class="num">${wz.toFixed(1)}</td><td class="num">${Math.round(median(rs.map(r => r.tokens)))}</td></tr>`;
 });
 $("table").innerHTML = t + "</tbody>";
-$("foot").textContent = `Generated ${L.generated} on the demo server. p-values are corrected across all ${N} keys and every span the detector tries.`;
+$("foot").textContent = `Generated ${L.generated} on the demo server.`;
 })();
 </script>
-</body>
-</html>

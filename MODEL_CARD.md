@@ -8,6 +8,22 @@ The web version of this card is `site/model-card.html`. Its numbers come from
 the latest `site/results.js`, and it links to the full results page
 (`site/index.html`).
 
+## In plain words
+
+- **What is it?** An invisible signature that a model writes into its own
+  text through its word choices. Readers can't see it, and the text is
+  exactly as good as without it.
+- **How do you check?** Run any text through the checker, which holds the
+  secret key. It says whether one of your models wrote it, and which one.
+- **Does it blame the wrong model?** Not once in testing: 0 false alarms in
+  2,016 checks of unsigned text or the wrong model's key.
+- **How often does it catch signed text?** 12 of 16 typical ~300-token chat
+  replies at the strict default setting, 15 of 16 at a looser one.
+- **What breaks it?** A full rewrite or translation. Very predictable text,
+  like code or short lists, carries only a weak signature.
+- **What it can't do:** spot other companies' models, or prove that a person
+  wrote something.
+
 ## Details
 
 | | |

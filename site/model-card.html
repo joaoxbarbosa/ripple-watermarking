@@ -1,41 +1,44 @@
+<!doctype html>
+<html lang="en">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ripple Fingerprint Model Card</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="site.css">
 <style>
-/* Model card: a two-column sheet (index rail + content), each section one framed block. */
-.sheet { display: grid; grid-template-columns: 240px minmax(0, 1fr); border: 1px solid var(--line); background: var(--bg); }
-.rail { border-right: 1px solid var(--line); padding: 24px; position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; display: grid; gap: 4px; }
-.rail a { font-size: 13px; text-decoration: none; padding: 5px 0; color: var(--muted); display: flex; gap: 10px; }
-.rail a b { font: 500 12px var(--mono); color: var(--faint); width: 22px; }
-.rail a:hover { color: var(--ink); }
-.content > section { padding: 28px; display: grid; gap: 16px; }
-.content > section + section { border-top: 1px solid var(--line); }
-@media (max-width: 860px) {
-  .sheet { grid-template-columns: 1fr; }
-  .rail { position: static; border-right: 0; border-bottom: 1px solid var(--line); grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  .content > section { padding: 20px; }
-}
+/* Model card: plain-language answers first, numbers second, technical detail folded away last. */
+.qa { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--bg); overflow: hidden; }
+.qa > div { padding: 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; display: grid; gap: 10px; align-content: start; }
+.qa h2 { font-size: 22px; letter-spacing: -0.02em; }
+.qa p { font-size: 16px; line-height: 1.6; }
+@media (max-width: 760px) { .qa { grid-template-columns: 1fr; } .qa > div { padding: 20px; } }
+.big { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); border-top: 0; background: var(--bg); overflow: hidden; }
+.big > div { padding: 24px 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; display: grid; gap: 8px; align-content: start; }
+.big b { font: 500 40px/1 var(--mono); letter-spacing: -0.04em; }
+.big strong { font-size: 15px; }
+.big p { font-size: 14px; color: var(--muted); }
+@media (max-width: 760px) { .big { grid-template-columns: 1fr; } }
+.cols { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); background: var(--bg); }
+.cols > div { padding: 28px; display: grid; gap: 12px; align-content: start; }
+.cols > div + div { border-left: 1px solid var(--line); background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--hatch) 6px 7px); }
+@media (max-width: 760px) { .cols { grid-template-columns: 1fr; } .cols > div { padding: 20px; } .cols > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+ul.list { margin: 0; padding-left: 1.1em; display: grid; gap: 10px; max-width: 70ch; font-size: 15px; }
+ul.list strong { font-weight: 600; }
+.tech { border: 1px solid var(--line); background: var(--bg); }
+.tech > summary { padding: 20px 28px; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.tech > summary::-webkit-details-marker { display: none; }
+.tech > summary::after { content: "+"; font: 500 20px var(--mono); }
+.tech[open] > summary::after { content: "−"; }
+.tech[open] > summary { border-bottom: 1px solid var(--line); }
+.tech-body { padding: 28px; display: grid; gap: 18px; }
+@media (max-width: 760px) { .tech > summary, .tech-body { padding: 20px; } }
 dl.facts { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); margin: 0; border-top: 1px solid var(--hair); }
 dl.facts dt, dl.facts dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--hair); font-size: 14px; }
 dl.facts dt { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 12px; }
 @media (max-width: 520px) { dl.facts { grid-template-columns: 1fr; } dl.facts dt { border-bottom: 0; padding-bottom: 0; } }
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); border: 1px solid var(--line); }
-.steps div { padding: 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0 -1px -1px 0; display: grid; gap: 6px; align-content: start; }
-.steps div b { font: 500 12px var(--mono); color: var(--muted); }
-.steps p { font-size: 14px; }
-.steps { overflow: hidden; }
-ul.list { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; max-width: 72ch; font-size: 14.5px; }
-ul.list strong { font-weight: 600; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); }
-.cols > div { padding: 18px; display: grid; gap: 10px; align-content: start; }
-.cols > div + div { border-left: 1px solid var(--line); background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--hatch) 6px 7px); }
-@media (max-width: 700px) { .cols { grid-template-columns: 1fr; } .cols > div + div { border-left: 0; border-top: 1px solid var(--line); } }
 pre { margin: 0; font: 13px/1.6 var(--mono); background: var(--field); border: 1px solid var(--hair); padding: 14px 16px; overflow-x: auto; }
-.inline-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--line); overflow: hidden; }
-.inline-stats .stat { padding: 14px; }
 </style>
 
 <div class="wrap">
@@ -53,132 +56,87 @@ pre { margin: 0; font: 13px/1.6 var(--mono); background: var(--field); border: 1
     <div class="hero-card">
       <div class="label"><b>Model card</b>ripple-fingerprint 0.1.0</div>
       <h1>Ripple Fingerprint</h1>
-      <p class="sub">A secret-key watermark and source-attribution system for text from language models, built for the Ripple family. It replaces the last sampling step of a model and comes with an exact statistical detector.</p>
-      <div class="chips"><span class="chip">sampling-time watermark</span><span class="chip">exact p-values</span><span class="chip">per-model keys</span><span class="chip">NumPy · HF · MLX</span></div>
+      <p class="sub">An invisible signature that an AI model writes into its own text, so you can later prove which of your models wrote something.</p>
       <div><a class="btn primary" href="index.html">See the results and stats →</a></div>
     </div>
   </div>
 
-  <div class="sheet">
-    <nav class="rail" aria-label="Sections">
-      <a href="#details"><b>01</b>Details</a>
-      <a href="#how"><b>02</b>How it works</a>
-      <a href="#params"><b>03</b>Parameters</a>
-      <a href="#use"><b>04</b>Intended use</a>
-      <a href="#eval"><b>05</b>Evaluation</a>
-      <a href="#limits"><b>06</b>Limitations</a>
-      <a href="#usage"><b>07</b>Usage</a>
-    </nav>
-    <div class="content">
-      <section id="details">
-        <div class="label"><b>01</b>Details</div>
-        <dl class="facts">
-          <dt>Package</dt><dd><code>ripple-fingerprint</code> 0.1.0</dd>
-          <dt>Type</dt><dd>Sampling-time watermark (keyed Gumbel-max, also called the exponential race) with an exact statistical detector</dd>
-          <dt>Built for</dt><dd><code>ricursiveAI/Ripple-65B-Preview</code>. Works with any model that exposes next-token probabilities.</dd>
-          <dt>Back ends</dt><dd>Pure NumPy core · Hugging Face <code>generate</code> and <code>LogitsProcessor</code> · Apple MLX (<code>mlx-lm</code>)</dd>
-          <dt>Dependencies</dt><dd><code>numpy</code>, <code>scipy</code> for the core; <code>torch</code>, <code>transformers</code> or <code>mlx-lm</code> for generation</dd>
-          <dt>Secret</dt><dd>One key of at least 16 bytes, or one master key for a registry of models</dd>
-          <dt>License</dt><dd>No license file in the repository yet</dd>
-        </dl>
-      </section>
+  <div class="qa">
+    <div><div class="label"><b>01</b>What is it?</div><h2>A signature hidden in word choice</h2><p>When the model picks each word, a secret key nudges which of its likely options it picks. Readers can't see it, and the text is exactly as good as without it.</p></div>
+    <div><div class="label"><b>02</b>How do you check?</div><h2>Run any text through the checker</h2><p>The checker holds the secret key. It says whether one of your models wrote the text, which one, and how sure it is.</p></div>
+    <div><div class="label"><b>03</b>Does it blame the wrong model?</div><h2 id="qa-fp">No</h2><p id="qa-fp-p">It only says "this model wrote it" when the evidence is overwhelming. You choose the false-alarm rate, and the default is one in 100,000.</p></div>
+    <div><div class="label"><b>04</b>What breaks it?</div><h2>Rewriting the whole text</h2><p>Fixing typos or changing some words is fine. A full paraphrase or translation erases it. Very predictable text, like code or short lists, carries only a weak signature.</p></div>
+  </div>
 
-      <section id="how">
-        <div class="label"><b>02</b>How it works</div>
-        <div class="steps">
-          <div><b>1 · Keyed randomness</b><p><code>HMAC-SHA256(key, last 3 token ids)</code> seeds a SHAKE-256 stream with one uniform <code>u</code> per vocabulary token.</p></div>
-          <div><b>2 · Exact sampling</b><p>The token is <code>argmax u<sup>1/p</sup></code>. It is drawn with probability exactly <code>p</code>, but tokens with a high <code>u</code> win more often.</p></div>
-          <div><b>3 · Exact test</b><p>The detector sums <code>−log(1−u)</code>. For text the key didn't write the sum is Gamma(n, 1), so the p-value is exact.</p></div>
-          <div><b>4 · Local, so edit-robust</b><p>Each seed depends only on a 3-token window. An edit spoils the windows that touch it, and the rest still score.</p></div>
-        </div>
-        <ul class="list">
-          <li><strong>Repeated-context masking.</strong> A 3-token context that already appeared in the response is sampled with true randomness, and the detector skips it.</li>
-          <li><strong>Entropy gate.</strong> True randomness is used until the response has 8 bits of surprisal, so the same prompt still gives different answers.</li>
-          <li><strong>Attribution.</strong> Each model's key is <code>HMAC(master, label)</code>. The whole text and its best spans are tested per model, corrected for every model and every possible segment, so the chance of naming any model for text it didn't write stays below the threshold.</li>
-        </ul>
-      </section>
+  <div class="gap"></div>
+  <div class="block"><div class="label"><b>05</b>Results at a glance</div><p class="lead" id="glance-setup">From one test run on a small chat model.</p></div>
+  <div class="big" id="glance"></div>
 
-      <section id="params">
-        <div class="label"><b>03</b>Parameters</div>
-        <div class="tablewrap"><table>
-          <thead><tr><th>Parameter</th><th>Default</th><th>Effect</th></tr></thead>
-          <tbody>
-            <tr><td class="mono">context_width</td><td class="mono">3</td><td>Tokens hashed into each seed. Smaller is more robust to edits; larger repeats contexts less often across responses.</td></tr>
-            <tr><td class="mono">entropy_threshold</td><td class="mono">8.0 bits</td><td>Surprisal sampled with true randomness at the start of each response.</td></tr>
-            <tr><td class="mono">fpr</td><td class="mono">1e-5</td><td>Detection threshold, and the exact false-positive rate per test.</td></tr>
-            <tr><td class="mono">key</td><td class="mono">≥ 16 bytes</td><td>Checked by the constructor. Keep it server-side.</td></tr>
-          </tbody>
-        </table></div>
-      </section>
+  <div class="gap"></div>
+  <div class="cols">
+    <div><div class="label"><b>06</b>Good for</div><ul class="list">
+      <li>Checking whether a text came from one of your own models.</li>
+      <li>Telling your models apart, each with its own key.</li>
+      <li>Finding which part of a mixed document each model wrote.</li>
+    </ul></div>
+    <div><div class="label"><b>07</b>Not for</div><ul class="list">
+      <li>Spotting text from other companies' models. It only knows yours.</li>
+      <li>Proving a person wrote something. "Not found" only means no signature.</li>
+      <li>Models run with no randomness (temperature 0).</li>
+    </ul></div>
+  </div>
 
-      <section id="use">
-        <div class="label"><b>04</b>Intended use</div>
-        <div class="cols">
-          <div><h3>Use it for</h3><ul class="list">
-            <li>Marking text from your own deployed models so you can later check whether a text came from them, and from which one.</li>
-            <li>Splitting a mixed document into the stretches each of your models wrote.</li>
-            <li>Detection run as a service that holds the key.</li>
-          </ul></div>
-          <div><h3>Not for</h3><ul class="list">
-            <li>Detecting text from models that don't sample with these keys.</li>
-            <li>Proving a human wrote something. A negative result only means this key's watermark isn't there.</li>
-            <li>Greedy decoding (T = 0) or beam search, which have no sampling randomness.</li>
-            <li>Shipping the key to clients.</li>
-          </ul></div>
-        </div>
-      </section>
+  <div class="gap"></div>
+  <div class="block">
+    <div class="label"><b>08</b>Keep in mind</div>
+    <ul class="list">
+      <li><strong>Longer is better.</strong> A few sentences may not be enough. A few paragraphs usually are.</li>
+      <li><strong>Guard the key.</strong> Whoever holds it can check text, and also fake or remove the signature. Keep it on a server.</li>
+      <li><strong>Not yet tested on Ripple-65B itself.</strong> The numbers here come from a 4B model on a laptop.</li>
+    </ul>
+  </div>
 
-      <section id="eval">
-        <div class="label"><b>05</b>Evaluation</div>
-        <p class="lead" id="eval-setup"></p>
-        <div class="inline-stats" id="eval-stats"></div>
-        <h3>Detection by threshold</h3>
-        <div class="tablewrap"><table id="eval-thr"></table></div>
-        <h3>Robustness to word edits <span class="muted" style="font-weight:400">(p &lt; 10⁻⁵, 3 random edits per reply)</span></h3>
-        <div class="tablewrap"><table id="eval-rob"></table></div>
-        <h3>Calibration and attribution</h3>
-        <ul class="list" id="eval-other"></ul>
-        <h3>Earlier results (GPT-2)</h3>
-        <p class="lead">200-token GPT-2 generations at T = 0.8, top-p 0.95 were 100% detected, clean and with up to 30% of words replaced (median p 7×10⁻¹³ at 30%). Mean NLL of watermarked text was 4.02 ± 0.11 against 4.19 ± 0.10 for plain sampling, within noise. GPT-2 has more randomness per token than a tuned chat model, so it is detected more easily.</p>
-        <h3>Not yet measured</h3>
-        <ul class="list">
-          <li>Ripple-65B itself. Run <code>RIPPLE_FP_TEST_MODEL=/path/to/ripple pytest tests/test_hf.py</code> on a machine that can load it.</li>
-          <li>Paraphrasing and translation attacks, beyond random word edits.</li>
-          <li>Larger prompt sets and other domains such as code.</li>
-        </ul>
-        <div><a class="btn" href="index.html">All charts and per-reply numbers →</a></div>
-      </section>
-
-      <section id="limits">
-        <div class="label"><b>06</b>Limitations and risks</div>
-        <ul class="list">
-          <li><strong>Rewrites remove it.</strong> A full paraphrase or translation keeps the meaning but changes the tokens.</li>
-          <li><strong>Low-entropy text carries little signal.</strong> Code, lists, one-line facts and near-deterministic chat replies need more tokens, and some 300-token replies are never detected at p &lt; 10⁻⁵.</li>
-          <li><strong>The key is the whole secret.</strong> Anyone with it can detect, forge or strip the watermark.</li>
-          <li><strong>Retokenization.</strong> Detection re-encodes the text, so whitespace or Unicode normalization can spoil the tokens it touches.</li>
-          <li><strong>Many responses.</strong> Common 3-token contexts recur across responses and reuse the same keyed draws. No single response changes, but a large set could in principle show structure. A larger <code>context_width</code> reduces this, at some cost in edit robustness.</li>
-          <li><strong>Only your models.</strong> A negative result is not evidence that a human wrote the text.</li>
-        </ul>
-      </section>
-
-      <section id="usage">
-        <div class="label"><b>07</b>Usage</div>
+  <div class="gap"></div>
+  <details class="tech">
+    <summary><span class="label"><b>09</b>Technical details</span><span class="note">method, settings, full numbers, code</span></summary>
+    <div class="tech-body">
+      <h3>Method</h3>
+      <ul class="list">
+        <li><code>HMAC-SHA256(key, last 3 token ids)</code> seeds a SHAKE-256 stream with one uniform <code>u</code> per vocabulary token.</li>
+        <li>The model picks <code>argmax u<sup>1/p</sup></code> (exponential race). Each token is still drawn with probability exactly <code>p</code>.</li>
+        <li>The detector sums <code>−log(1−u)</code>. For text the key didn't write this is Gamma(n, 1), so the p-value is exact.</li>
+        <li>Repeated 3-token contexts and the first 8 bits of surprisal use true randomness, so outputs stay diverse.</li>
+        <li>Per-model keys are <code>HMAC(master, label)</code>. Attribution is corrected across all models and every span.</li>
+      </ul>
+      <h3>Facts</h3>
+      <dl class="facts">
+        <dt>Package</dt><dd><code>ripple-fingerprint</code> 0.1.0 · NumPy core, Hugging Face and MLX back ends</dd>
+        <dt>Built for</dt><dd><code>ricursiveAI/Ripple-65B-Preview</code>; works with any model that exposes next-token probabilities</dd>
+        <dt>Defaults</dt><dd><code>context_width=3</code> · <code>entropy_threshold=8</code> bits · <code>fpr=1e-5</code> · key ≥ 16 bytes</dd>
+        <dt>Test setup</dt><dd id="t-setup"></dd>
+        <dt>License</dt><dd>No license file in the repository yet</dd>
+      </dl>
+      <h3>Detection by threshold</h3>
+      <div class="tablewrap"><table id="eval-thr"></table></div>
+      <h3>After editing words <span class="muted" style="font-weight:400">(p &lt; 10⁻⁵)</span></h3>
+      <div class="tablewrap"><table id="eval-rob"></table></div>
+      <h3>Other checks</h3>
+      <ul class="list" id="eval-other"></ul>
+      <h3>Code</h3>
 <pre>from ripple_fingerprint import Watermarker
 wm = Watermarker(key=SECRET_KEY)
 state = wm.new_state()                            # one per response
-tok = wm.sample(probs, history_token_ids, state)  # replaces the multinomial draw
+tok = wm.sample(probs, history_token_ids, state)  # replaces the usual random draw
 wm.detect(token_ids).p_value</pre>
 <pre>from ripple_fingerprint import ModelRegistry
 reg = ModelRegistry(master_key=MASTER_SECRET)
-wm_big = reg.register("ripple-65b", tokenizer_big)
+reg.register("ripple-65b", tokenizer)
 reg.attribute(text).best    # "ripple-65b", or None</pre>
-        <p class="note">The README covers the Hugging Face and MLX integrations and the demo server.</p>
-      </section>
     </div>
-  </div>
+  </details>
 
   <div class="cta">
-    <div><strong>See the measurements</strong><span>Charts for detection, edit robustness, calibration, attribution and speed.</span></div>
+    <div><strong>See the measurements</strong><span>Charts for detection, editing, false alarms, attribution and speed.</span></div>
     <a class="btn" href="index.html">Open results and stats →</a>
   </div>
 
@@ -204,37 +162,34 @@ reg.attribute(text).best    # "ripple-65b", or None</pre>
 const R = window.RESULTS; if (!R) return;
 const $ = id => document.getElementById(id);
 const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const sup = n => String(n).replace(/-/g, "−").split("").map(c => ({"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","−":"⁻"})[c] || c).join("");
-const pfmt = l => { const e = Math.floor(l), m = Math.pow(10, l - e); return `${m.toFixed(1)}×10${sup(e)}`; };
 const W = R.watermarked, P = R.plain, S = R.settings, C = R.calibration, A = R.attribution;
-const hits = R.tokens_to_detect.filter(x => x !== null);
 const spd = R.speed.rows.find(r => r.name === "Fingerprinted: now");
+const loose = W.log10_p.filter(v => v < -2).length;
+const wrongTotal = P.flagged + C.flagged + A.wrong + A.plain_named;
+const testsTotal = P.n + C.tests + A.n * (A.labels.length - 1) + A.n;
 
-$("eval-setup").textContent = `${R.model}, ${R.n_prompts} open-ended chat prompts, one fingerprinted and one plain reply each. T = ${S.temperature}, top-p = ${S.top_p}, up to ${S.max_new_tokens} new tokens. Sampling is random, so a rerun gives somewhat different counts. Run of ${R.generated}.`;
-const stat = (b, s) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`;
-$("eval-stats").innerHTML = [
-  stat(`${W.flagged}/${W.n}`, "detected at p < 10⁻⁵"),
-  stat(`${P.flagged}/${P.n}`, "plain replies flagged"),
-  stat(pfmt(median(W.log10_p)), "median p, fingerprinted"),
-  stat(hits.length ? Math.round(median(hits)) : "—", "median tokens to detect"),
-  stat(`${Math.round(spd.share * 100)}%`, "of native MLX speed"),
-  stat(`${C.flagged}/${C.tests.toLocaleString()}`, "wrong-key tests flagged"),
-].join("");
+$("qa-fp").textContent = wrongTotal === 0 ? "No, not once in testing" : `${wrongTotal} times in ${testsTotal.toLocaleString()} tests`;
+$("qa-fp-p").textContent = `Across ${testsTotal.toLocaleString()} checks of text a key didn't write, it raised ${wrongTotal === 0 ? "no" : wrongTotal} false alarm${wrongTotal === 1 ? "" : "s"}. It only names a model when the evidence is overwhelming; the default false-alarm rate is one in 100,000.`;
 
+$("glance-setup").textContent = `One test run: ${R.n_prompts} everyday chat requests (stories, explanations, advice, poems) answered by ${R.model.replace(/-MLX-8bit$/, "")} on a laptop, each reply about ${S.max_new_tokens} tokens (roughly ${Math.round(S.max_new_tokens * 0.75)} words).`;
+$("glance").innerHTML = [
+  [`${W.flagged} of ${W.n}`, "signed replies caught", `At the strict default setting. With a looser setting (one false alarm in 100) it caught ${loose} of ${W.n}.`],
+  [`${wrongTotal}`, "false alarms", `In ${testsTotal.toLocaleString()} checks of unsigned text or the wrong model's key.`],
+  [`${Math.round(spd.share * 100)}%`, "of normal speed", "Signing adds almost no time to generation."],
+].map(([b, s, p]) => `<div><b>${b}</b><strong>${s}</strong><p>${p}</p></div>`).join("");
+
+$("t-setup").textContent = `${R.model}, ${R.n_prompts} prompts × (signed + plain), T = ${S.temperature}, top-p = ${S.top_p}, ≤ ${S.max_new_tokens} tokens, run of ${R.generated}`;
 const ths = [[-2, "0.01"], [-3, "10⁻³"], [-5, "10⁻⁵ (default)"], [-8, "10⁻⁸"]];
-$("eval-thr").innerHTML = `<thead><tr><th>Threshold</th><th class="num">Fingerprinted detected</th><th class="num">Plain flagged</th></tr></thead><tbody>` +
+$("eval-thr").innerHTML = `<thead><tr><th>Threshold</th><th class="num">Signed replies caught</th><th class="num">Plain replies flagged</th></tr></thead><tbody>` +
   ths.map(([l, n]) => `<tr><td class="mono">p &lt; ${n}</td><td class="num">${W.log10_p.filter(v => v < l).length} / ${W.n}</td><td class="num">${P.log10_p.filter(v => v < l).length} / ${P.n}</td></tr>`).join("") + "</tbody>";
-
 const RB = R.robustness, idx = [0, 2, 4, 6, 8, 10];
 $("eval-rob").innerHTML = `<thead><tr><th>Words changed</th>${idx.map(i => `<th class="num">${Math.round(RB.fraction[i] * 100)}%</th>`).join("")}</tr></thead><tbody>` +
   ["replace", "delete"].map(k => `<tr><td>${k === "replace" ? "Replaced" : "Deleted"}</td>${idx.map(i => `<td class="num">${Math.round(RB[k].watermarked[i])}%</td>`).join("")}</tr>`).join("") + "</tbody>";
-
-const found = R.spans.filter(s => s.found), ov = found.map(s => s.overlap * 100);
+const found = R.spans.filter(s => s.found);
 $("eval-other").innerHTML = [
-  `<li><strong>Calibration.</strong> ${C.tests.toLocaleString()} tests of text a key didn't write (${R.n_prompts * 2} replies × ${C.keys} unrelated keys): ${C.flagged} below 10⁻⁵, smallest p ${C.min_p.toExponential(1)}, ${(C.share_below_01 * 100).toFixed(1)}% below 0.01 against 1% expected.</li>`,
-  `<li><strong>Attribution.</strong> With ${A.labels.length} models registered, ${A.correct} of ${A.n} fingerprinted replies were attributed to the right model and only that model. A wrong model was named ${A.wrong} times; plain replies were attributed ${A.plain_named} times.</li>`,
-  `<li><strong>Mixed documents.</strong> The fingerprinted passage between two plain replies was found in ${found.length} of ${R.spans.length} documents${found.length ? `, overlapping the true passage by ${Math.round(Math.min(...ov))}–${Math.round(Math.max(...ov))}%` : ""}. No span went to a wrong model.</li>`,
-  `<li><strong>Speed.</strong> ${Math.round(spd.share * 100)}% of native MLX tokens per second on ${R.speed.model}, ${R.speed.machine}.</li>`,
+  `<li>${C.tests.toLocaleString()} wrong-key tests: ${C.flagged} below 10⁻⁵, smallest p ${C.min_p.toExponential(1)}, ${(C.share_below_01 * 100).toFixed(1)}% below 0.01 (1% expected).</li>`,
+  `<li>With ${A.labels.length} models registered: ${A.correct}/${A.n} signed replies named as the right model only; a wrong model named ${A.wrong} times.</li>`,
+  `<li>Mixed documents: the signed passage was located in ${found.length} of ${R.spans.length}; no span went to a wrong model.</li>`,
 ].join("");
 $("foot").textContent = `Numbers from the run of ${R.generated} · ${R.model}`;
 })();

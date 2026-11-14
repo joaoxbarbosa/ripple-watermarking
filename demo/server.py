@@ -19,13 +19,15 @@ tokenizers, so checking text (against every model) never loads weights.
 
 from __future__ import annotations
 
+import json
 import os
+import queue
 import secrets
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -57,6 +59,61 @@ app = FastAPI(title="Ripple Fingerprint demo")
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 # The whole-text test is flagged when p * (2 tests per model) < fpr.
 add_stream_route(app, engine, keys.watermarker, flag_p=keys.fpr / (2 * len(MODELS)))
+
+
+class LineupReq(BaseModel):
+    prompt: str = Field(min_length=1, max_length=4000)
+    models: list[str] | None = None  # default: every model
+    watermark: bool = True
+    temperature: float = Field(1.0, gt=0, le=2)
+    top_p: float = Field(1.0, gt=0, le=1)
+    max_new_tokens: int = Field(300, ge=1, le=1024)
+
+
+@app.post("/api/lineup")
+def lineup(req: LineupReq):
+    """Every model answers the same prompt, one after another; each reply is then
+    checked against every model's key. Newline-delimited JSON events:
+    {"type":"start","models":[..]}, then per model {"type":"model","model":..} when it
+    starts and {"type":"result","model":..,"text":..,"best":..,"evidence":{name: p},..},
+    or {"type":"error","model":..,"detail":..}; finally {"type":"done"}."""
+    names = req.models or MODELS
+    for n in names:
+        engine.check(n)
+    events: queue.Queue = queue.Queue()
+
+    def work():
+        for n in names:
+            events.put({"type": "model", "model": n, "loading": not engine.loaded(n)})
+            try:
+                r = engine._run(n, req.prompt, keys.watermarker(n), req.watermark, req.temperature,
+                                req.top_p, req.max_new_tokens, False, None)
+                res = keys.attribute(r["text"]) if r["text"].strip() else None
+                span_p: dict = {}
+                for sp in res.spans if res else []:
+                    span_p[sp.model] = min(sp.p_value, span_p.get(sp.model, 1.0))
+                events.put({
+                    "type": "result", "model": n, "text": r["text"], "seconds": r["seconds"],
+                    "load_seconds": r["load_seconds"], "watermark": req.watermark,
+                    "best": res.best if res else None, "matches": res.matches if res else [],
+                    "num_scored": res[n].result.num_scored if res else 0,
+                    "z": float(res[n].result.z_score) if res else 0.0,
+                    "evidence": {m.name: min(m.adjusted_p, span_p.get(m.name, 1.0)) for m in res.models} if res else {},
+                })
+            except Exception as e:  # one broken model shouldn't stop the lineup
+                events.put({"type": "error", "model": n, "detail": f"{type(e).__name__}: {e}"})
+        events.put({"type": "done"})
+        events.put(None)
+
+    events.put({"type": "start", "models": names, "fpr": keys.fpr})
+    engine.worker.submit(work)
+
+    def gen():
+        while (ev := events.get()) is not None:
+            yield json.dumps(ev) + "\n"
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson",
+                             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
 
 class GenerateReq(BaseModel):

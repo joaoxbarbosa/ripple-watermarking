@@ -97,6 +97,16 @@ With already-tokenized input from models that share a tokenizer, use
 
 ![Demo: text with 10% of its words replaced is still attributed to Qwen2.5-0.5B-Instruct; the other models see ordinary text](docs/demo-attribution.jpg)
 
+**A document stitched together from two models**, split by source in the demo's
+"Who wrote which part" view. The bar across the top shows each span's model:
+Qwen2.5-0.5B-Instruct wrote the opening and the numbered list, and Qwen3-0.6B
+wrote the closing paragraphs. The hatched gaps are where neither fingerprint is
+strong enough to call. In the text, tokens are shaded by their evidence for the
+selected model, its span is underlined, and dotted tokens are the ones the
+detector skips.
+
+![Demo: a mixed document split into a Qwen2.5-0.5B-Instruct span and a Qwen3-0.6B span, with per-token evidence shading](docs/attribution.webp)
+
 ## Demo website
 
 ```bash

@@ -4,13 +4,28 @@
     {
       "name": "fingerprint-demo",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["-m", "demo.server"],
+      "runtimeArgs": [
+        "-m",
+        "demo.server"
+      ],
       "port": 8000,
       "autoPort": false
     },
     {
       "name": "fingerprint-demo-running",
       "url": "http://localhost:8000"
+    },
+    {
+      "name": "fingerprint-demo-8001",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PORT=8001",
+        ".venv/bin/python",
+        "-m",
+        "demo.server"
+      ],
+      "port": 8001,
+      "autoPort": false
     }
   ]
 }

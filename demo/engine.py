@@ -13,6 +13,7 @@ Backends:
 
 from __future__ import annotations
 
+import gc
 import json
 import os
 import queue
@@ -96,11 +97,13 @@ class Engine:
     """Loads tokenizers and models lazily. All model work runs on one worker thread
     (MLX streams are per-thread, and it keeps generation one at a time)."""
 
-    def __init__(self, models: list[dict]):
+    def __init__(self, models: list[dict], max_loaded: int | None = None):
         self.info = {m["name"]: m for m in models}
         self.names = [m["name"] for m in models]
         self.tokenizers: dict = {}
-        self.models: dict = {}
+        self.models: dict = {}  # insertion order = least recently used first
+        # Running every model in turn would otherwise keep them all in memory.
+        self.max_loaded = max_loaded or int(os.environ.get("RIPPLE_FP_MAX_LOADED", 2))
         self.worker = ThreadPoolExecutor(max_workers=1)
 
     def check(self, name: str):
@@ -117,8 +120,25 @@ class Engine:
     def loaded(self, name: str) -> bool:
         return name in self.models
 
+    def unload(self, name: str):
+        if self.models.pop(name, None) is None:
+            return
+        print(f"unloading {name}", flush=True)
+        gc.collect()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        if self.info[name]["backend"] == "mlx":
+            import mlx.core as mx
+            mx.clear_cache()
+
     def _model(self, name: str):
-        if name not in self.models:
+        if name in self.models:
+            self.models[name] = self.models.pop(name)  # mark as most recently used
+        else:
+            while len(self.models) >= self.max_loaded:
+                self.unload(next(iter(self.models)))
             print(f"loading {name} ...", flush=True)
             if self.info[name]["backend"] == "mlx":
                 from mlx_lm import load

@@ -1,0 +1,20 @@
+[project]
+name = "ripple-fingerprint"
+version = "0.1.0"
+description = "Distortion-free, edit-robust watermarking for LLM outputs"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy"]
+
+[project.optional-dependencies]
+hf = ["torch", "transformers"]
+test = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ripple_fingerprint"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

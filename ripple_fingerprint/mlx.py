@@ -55,14 +55,20 @@ def generate_ids(
     """
     if temperature <= 0:
         raise ValueError("greedy decoding has no randomness to watermark; use temperature > 0")
-    gpu_softmax = not top_k and top_p >= 1.0  # plain temperature: softmax on the GPU
-
     def forward(ids):
-        """Launch the next forward pass asynchronously; returns what to read back."""
-        logits = model(ids, cache=cache)[0, -1].astype(mx.float32)
-        y = mx.softmax(logits / temperature) if gpu_softmax else logits
-        mx.async_eval(y)
-        return y
+        """Launch the next forward pass asynchronously, with temperature / top-k /
+        top-p applied on the GPU. Returns the probabilities to read back."""
+        z = model(ids, cache=cache)[0, -1].astype(mx.float32) / temperature
+        if top_k and 0 < top_k < z.size:
+            kth = mx.sort(z)[-top_k]
+            z = mx.where(z < kth, -mx.inf, z)
+        probs = mx.softmax(z)
+        if top_p < 1.0:  # keep the smallest set of top tokens whose mass reaches top_p
+            sp = -mx.sort(-probs)
+            kept = mx.sum((mx.cumsum(sp) - sp) <= top_p)
+            probs = mx.where(probs >= mx.take(sp, kept - 1), probs, 0.0)
+        mx.async_eval(probs)
+        return probs
 
     cache = make_prompt_cache(model)
     pending = forward(mx.array(prompt_ids)[None])
@@ -71,12 +77,8 @@ def generate_ids(
     draws = None
     out: list[int] = []
     for _ in range(max_new_tokens):
-        y = np.array(pending)  # waits for the GPU
-        if gpu_softmax:  # float32 from the GPU: renormalize in float64 so it sums to 1 exactly
-            p = y.astype(np.float64)
-            p /= p.sum()
-        else:
-            p = warp(y, temperature, top_k, top_p)
+        p = np.array(pending).astype(np.float64)  # waits for the GPU
+        p /= p.sum()  # float32 from the GPU: renormalize so it sums to 1 exactly
         if watermark:
             tok = watermarker.sample(p, history, state, draws=draws)
         else:

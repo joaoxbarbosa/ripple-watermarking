@@ -1,0 +1,12 @@
+{
+  "model": "Qwen3-VL-4B-Instruct (MLX, 8-bit)",
+  "machine": "Apple M4 Pro",
+  "note": "Each share is measured against native MLX sampling in the same benchmark run (medians of 4-5 interleaved runs, 150-200 tokens, temperature 1.0).",
+  "rows": [
+    {"name": "Native MLX sampling (LM Studio)", "share": 1.0, "reference": true},
+    {"name": "Fingerprinted: before optimizing", "share": 0.707, "before": true},
+    {"name": "Fingerprinted: now", "share": 0.968},
+    {"name": "Fingerprinted + visualizer trace", "share": 0.940},
+    {"name": "Fingerprinted, top-p 0.95", "share": 0.918}
+  ]
+}

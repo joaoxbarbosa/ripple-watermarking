@@ -30,7 +30,10 @@
   }
   * { box-sizing: border-box; border-radius: 0; }
   .theme { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 10px; }
-  .top-right { display: flex; align-items: center; gap: 16px; }
+  .top-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .pages { display: flex; gap: 14px; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+  .pages a { color: var(--muted); text-decoration: none; }
+  .pages a:hover { color: var(--ink); }
   html { background: var(--bg); }
   body { margin: 0; color: var(--ink); font: 15px/1.55 var(--sans);
     background: linear-gradient(var(--veil), var(--veil)), var(--art) center / var(--art-size) var(--art-repeat) fixed, var(--bg);
@@ -231,6 +234,7 @@
   <div class="top">
     <div class="brand"><i></i>Ripple Fingerprint</div>
     <div class="top-right">
+      <nav class="pages" aria-label="Pages"><a href="/results/">Results</a><a href="/results/models.html">Every model</a></nav>
       <div class="meta" id="model">loading model…</div>
       <button class="theme" id="theme" aria-label="Toggle dark mode">Dark</button>
     </div>
@@ -253,6 +257,17 @@
       </div>
       <p class="model-note" id="modelNote"></p>
       <textarea id="prompt" aria-label="Prompt">Write a short history of the printing press.</textarea>
+      <div class="row tools" id="presets">
+        <span>Try</span>
+        <button data-prompt="Write a short history of the printing press.">History</button>
+        <button data-prompt="Write a short story about a lighthouse keeper who finds a message in a bottle.">Story</button>
+        <button data-prompt="Write a product review of a pair of noise-cancelling headphones you've used for a month.">Review</button>
+        <button data-prompt="Write a cover letter for a junior data analyst position at a city transit agency.">Cover letter</button>
+        <button data-prompt="Explain how vaccines train the immune system, for a curious twelve-year-old.">Explainer</button>
+        <button data-prompt="Write a persuasive op-ed arguing that cities should replace parking lots with parks.">Op-ed</button>
+        <button data-prompt="Write a student essay on the causes of the French Revolution.">Essay</button>
+        <button data-prompt="Write an email to your landlord asking them to fix a leaking kitchen sink.">Email</button>
+      </div>
       <div class="controls">
         <label>Temperature <output id="tv">1.0</output><input id="temp" type="range" min="0.1" max="1.5" step="0.05" value="1"></label>
         <label>Top-p <output id="pv">1.00</output><input id="topp" type="range" min="0.5" max="1" step="0.01" value="1"></label>
@@ -368,6 +383,9 @@ fetch("/api/info").then(r => r.json()).then(i => {
   $("foot").textContent = `Context ${i.context_width} tokens · flag threshold p < ${i.fpr}`;
 });
 $("modelSel").onchange = syncModel;
+document.querySelectorAll("[data-prompt]").forEach(b => b.onclick = () => {
+  $("prompt").value = b.dataset.prompt; $("prompt").focus();
+});
 
 $("gen").onclick = () => runGen(false);
 $("genAppend").onclick = () => runGen(true);

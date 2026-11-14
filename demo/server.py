@@ -1,11 +1,12 @@
 """Demo web app: generate watermarked text, edit it, and check it.
 
     .venv/bin/python -m demo.server            # http://localhost:8000
+                                               # results site at /results/
 
 Environment:
     RIPPLE_FP_MODELS  comma-separated HF model ids or local paths offered in the
                       model selector, next to any LM Studio MLX models found.
-                      Defaults to Qwen3-4B, two smaller Qwen chat models and gpt2.
+                      Defaults to two small Qwen chat models and gpt2.
     RIPPLE_FP_DEFAULT model selected by default (see demo/engine.py).
     RIPPLE_FP_KEY     master watermark secret. Each model's key is derived from
                       it and the model id, so checking text also tells you
@@ -57,6 +58,9 @@ CONTEXT_WIDTH = keys.watermarker(MODELS[0]).context_width
 
 app = FastAPI(title="Ripple Fingerprint demo")
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
+# The results site (site/) and the images it embeds (docs/) ride on the same server.
+app.mount("/results", StaticFiles(directory=HERE.parent / "site", html=True), name="results")
+app.mount("/docs", StaticFiles(directory=HERE.parent / "docs"), name="docs")
 # The whole-text test is flagged when p * (2 tests per model) < fpr.
 add_stream_route(app, engine, keys.watermarker, flag_p=keys.fpr / (2 * len(MODELS)))
 

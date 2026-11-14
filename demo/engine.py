@@ -34,8 +34,9 @@ from ripple_fingerprint import Watermarker, keyed_uniforms
 from ripple_fingerprint.hf import watermark_generate
 
 LMSTUDIO = Path.home() / ".lmstudio" / "models"
-HF_DEFAULTS = "Qwen/Qwen3-4B,Qwen/Qwen3-0.6B,Qwen/Qwen2.5-0.5B-Instruct,gpt2,openai-community/gpt2-large"
+HF_DEFAULTS = "Qwen/Qwen3-0.6B,Qwen/Qwen2.5-0.5B-Instruct,gpt2,openai-community/gpt2-large"
 PREFERRED_DEFAULT = "Qwen3-VL-4B-Instruct-MLX-8bit"
+HIDDEN_MLX = {"Qwen3-4B-Base-mlx-4Bit"}  # LM Studio models left out of the list
 TRACE_K = 8  # candidate tokens recorded per step for the visualizer
 
 
@@ -52,7 +53,7 @@ def discover_models() -> list[dict]:
     models = []
     if LMSTUDIO.is_dir():
         for d in sorted(LMSTUDIO.glob("*/*")):
-            if is_mlx(d):
+            if is_mlx(d) and d.name not in HIDDEN_MLX:
                 models.append({"name": str(d), "label": f"LM Studio · {d.name}", "backend": "mlx"})
     for n in os.environ.get("RIPPLE_FP_MODELS", HF_DEFAULTS).split(","):
         n = n.strip()

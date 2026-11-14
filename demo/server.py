@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 from ripple_fingerprint import ModelRegistry
 
 from .engine import Engine, add_stream_route, discover_models
+from .lean_check import add_lean_routes
 
 HERE = Path(__file__).parent
 
@@ -63,6 +64,7 @@ app.mount("/results", StaticFiles(directory=HERE.parent / "site", html=True), na
 app.mount("/docs", StaticFiles(directory=HERE.parent / "docs"), name="docs")
 # The whole-text test is flagged when p * (2 tests per model) < fpr.
 add_stream_route(app, engine, keys.watermarker, flag_p=keys.fpr / (2 * len(MODELS)))
+add_lean_routes(app)  # Proofs page: is the proof right? (the fingerprint says who wrote it)
 
 
 class LineupReq(BaseModel):

@@ -29,6 +29,8 @@
       --art: url("/static/sky.webp"); --art-size: cover; --art-repeat: no-repeat; --veil: rgba(10, 46, 134, 0.72);
   }
   * { box-sizing: border-box; border-radius: 0; }
+  .toplink { font: 600 13px var(--sans); color: var(--ink); text-decoration: none; border: 1px solid var(--line); padding: 8px 12px; transition: background .12s, color .12s; }
+  .toplink:hover { background: var(--ink); color: var(--bg); }
   .theme { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 10px; }
   .top-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .story { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--bg); margin-top: 20px; }
@@ -245,7 +247,7 @@
   <div class="top">
     <div class="brand"><i></i>Ripple Fingerprint</div>
     <div class="top-right">
-      
+      <a class="toplink" href="/results/proofs.html">Algorithmic watermarking</a>
       <div class="meta" id="model">loading model…</div>
       <button class="theme" id="theme" aria-label="Toggle dark mode">Dark</button>
     </div>

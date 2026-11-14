@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Algorithmic Watermarking</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+<style>
+/* Two questions about one proof: is it right (Lean), and who wrote it (the fingerprint). */
+textarea, input[type=text], select { width: 100%; font: 14px/1.6 var(--sans); color: var(--ink); background: var(--field);
+  border: 1px solid var(--hair); padding: 12px 14px; transition: border-color .15s; }
+textarea:hover, input[type=text]:hover { border-color: var(--faint); }
+textarea:focus, input[type=text]:focus { outline: none; border-color: var(--ink); background: var(--bg); }
+select { -webkit-appearance: none; appearance: none; font: 500 13px var(--mono); border-color: var(--line); padding: 10px 36px 10px 12px; cursor: pointer;
+  background: var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 14px center; }
+select option { background: var(--bg); color: var(--ink); }
+#code { min-height: 240px; font: 13px/1.6 var(--mono); tab-size: 2; font-variant-ligatures: none; resize: vertical; }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; }
+@media (max-width: 700px) { .row2 { grid-template-columns: 1fr; } }
+.status { font: 12px var(--mono); color: var(--muted); }
+button:disabled { border-color: var(--hair); color: var(--faint); background: var(--bg); cursor: default; }
+button.primary { background: var(--ink); color: var(--bg); font-weight: 600; font-size: 15px; padding: 14px 22px; border: 1px solid var(--ink); }
+button.primary:hover:not(:disabled) { background: var(--bg); color: var(--ink); }
+button.primary:disabled { background: var(--hair); color: var(--muted); }
+.spin { width: 10px; height: 10px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; display: none; animation: r .7s linear infinite; }
+.busy .spin { display: inline-block; }
+@keyframes r { to { transform: rotate(360deg); } }
+
+/* the two answers, side by side */
+.answers { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); background: var(--bg); }
+.answers > div { padding: 22px 24px; display: grid; gap: 6px; align-content: start; }
+.answers > div + div { border-left: 1px solid var(--line); }
+@media (max-width: 700px) { .answers { grid-template-columns: 1fr; } .answers > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+.answers .q { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+.answers b { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.answers p { font-size: 13px; opacity: .8; }
+.answers .yes { background: var(--ink); color: var(--bg); }
+.answers .weak { background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--hatch) 6px 7px); }
+.answers .idle { color: var(--muted); }
+.sum { border: 1px solid var(--line); border-top: 0; background: var(--bg); padding: 16px 24px; font-size: 15px; }
+.sum:empty { display: none; }
+.msgs { border: 1px solid var(--line); border-top: 0; background: var(--bg); }
+.msgs:empty { display: none; }
+.msg { padding: 10px 16px; font: 12px/1.55 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.msg + .msg { border-top: 1px solid var(--hair); }
+.msg b { font-weight: 500; text-transform: uppercase; letter-spacing: .06em; margin-right: 8px; }
+.msg.error b { background: var(--ink); color: var(--bg); padding: 1px 5px; }
+.offline { border: 1px solid var(--line); background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--hatch) 6px 7px); padding: 16px 20px; font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <a class="brand" href="index.html"><i></i>Ripple Fingerprint</a>
+    <nav class="top-right" aria-label="Demo">
+      <a class="btn" href="proofs.html" aria-current="page">Algorithmic watermarking</a>
+      <a class="btn" href="/">Open the live demo ↗</a>
+      <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Dark</button>
+    </nav>
+  </div>
+  <nav class="story" aria-label="Story"><a href="/"><b>Step 1</b><span>Try the live demo</span></a><a href="model-card.html"><b>Step 2</b><span>What it is</span></a><a href="index.html"><b>Step 3</b><span>Does it work?</span></a><a href="models.html"><b>Step 4</b><span>Every model</span></a></nav>
+
+  <div class="hero">
+    <div class="hero-card">
+      <div class="label"><b>Extra</b>algorithmic watermarking</div>
+      <h1>Is the proof right, and who wrote it?</h1>
+      <p class="sub">Lean, a proof checker, accepts a proof only if every step follows. The fingerprint names the model that wrote it. Fingerprinting never changes what a model can write, so a fingerprinted proof checks exactly like any other.</p>
+      <div class="chips" id="meta"><span class="chip">checking the server…</span></div>
+    </div>
+  </div>
+
+  <div class="offline" id="offline" hidden>This page needs the demo server, which runs Lean and the fingerprint check. Start it with <code>.venv/bin/python -m demo.server</code> and open <code>http://localhost:8000/results/proofs.html</code>.</div>
+
+  <div class="block">
+    <div class="label"><b>01</b>Write a proof</div>
+    <h2 class="q">Ask a model for a fingerprinted proof</h2>
+    <p class="lead">Small local models rarely write Lean that checks. This step is built for a strong coding model like Ripple; with the stand-ins you'll mostly see the fingerprint work and Lean reject the proof.</p>
+    <div class="row2">
+      <label class="field"><span>Model</span><select id="model" aria-label="Model"></select></label>
+      <label class="field"><span>Prove that…</span><input type="text" id="goal" value="for every list xs of natural numbers, (xs ++ []).length = xs.length"></label>
+    </div>
+    <div class="btnrow" style="align-items:center">
+      <button class="primary" id="gen"><span class="spin"></span><span id="genLabel">Write a fingerprinted proof</span> →</button>
+      <span class="status" id="genStatus"></span>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="label"><b>02</b>Check it</div>
+    <h2 class="q">Paste a proof, pick an example, or use the one above</h2>
+    <div class="row2">
+      <label class="field"><span>Example</span><select id="example" aria-label="Example proof"><option value="">Load an example…</option></select></label>
+      <div></div>
+    </div>
+    <textarea id="code" spellcheck="false" aria-label="Lean proof" placeholder="A Lean 4 proof. Start with `import Mathlib` to use Mathlib."></textarea>
+    <div class="btnrow" style="align-items:center">
+      <button class="primary" id="check"><span class="spin"></span><span id="checkLabel">Check both</span> →</button>
+      <span class="status" id="checkStatus"></span>
+    </div>
+  </div>
+
+  <div class="gap" style="height:24px"></div>
+  <div class="answers">
+    <div class="idle" id="aLean"><span class="q">Is it right? · Lean</span><b>Not checked yet</b><p>Lean either accepts every step or shows where the proof breaks.</p></div>
+    <div class="idle" id="aWho"><span class="q">Who wrote it? · fingerprint</span><b>Not checked yet</b><p>Every model signs with its own key, so the check names the writer.</p></div>
+  </div>
+  <div class="sum" id="sum"></div>
+  <div class="msgs" id="msgs"></div>
+
+  <nav class="nextbar" aria-label="Next page">
+    <a class="next" href="/"><b>Back to the start</b><span>Try it live</span><small>Generate, edit and check text in the demo</small></a>
+  </nav>
+
+  <footer>
+    <div id="foot"></div>
+    <div>Lean runs on the demo server (demo/lean_check.py). Proofs that import Mathlib use the Lake project in demo/proofs.</div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const root = document.documentElement, b = document.getElementById("theme");
+  try { const t = localStorage.getItem("fp-theme"); if (t) root.dataset.theme = t; } catch {}
+  const dark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const label = () => { b.textContent = dark() ? "Light" : "Dark"; };
+  label();
+  b.onclick = () => { root.dataset.theme = dark() ? "light" : "dark"; try { localStorage.setItem("fp-theme", root.dataset.theme); } catch {} label(); };
+})();
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const post = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+const fluke = p => p <= 0 ? "less than 1 in 10<sup>300</sup>" : p >= 0.01 ? p.toFixed(2)
+  : Math.floor(-Math.log10(p)) < 7 ? `1 in ${Math.round(1 / p).toLocaleString()}` : `1 in 10<sup>${Math.floor(-Math.log10(p))}</sup>`;
+let labels = {}, mathlib = false;
+
+const EXAMPLES = [
+  { name: "Swap the sides of “and”", code:
+`theorem and_swap (p q : Prop) (h : p ∧ q) : q ∧ p := by
+  -- split the hypothesis into its two parts
+  obtain ⟨hp, hq⟩ := h
+  -- put the two parts back together in the other order
+  exact ⟨hq, hp⟩` },
+  { name: "Induction: doubling is 2 × n", code:
+`def dbl : Nat → Nat
+  | 0 => 0
+  | n + 1 => dbl n + 2
+
+theorem dbl_eq (n : Nat) : dbl n = 2 * n := by
+  induction n with
+  | zero => rfl
+  | succ k ih =>
+    simp only [dbl]
+    omega` },
+  { mathlib: true, name: "Mathlib: there are infinitely many primes", code:
+`import Mathlib
+
+theorem exists_prime_gt (n : ℕ) : ∃ p, n < p ∧ p.Prime := by
+  -- Mathlib's version of Euclid's theorem gives a prime at least n + 1
+  obtain ⟨p, hp, hprime⟩ := Nat.exists_infinite_primes (n + 1)
+  -- that prime is bigger than n
+  exact ⟨p, by omega, hprime⟩` },
+  { mathlib: true, name: "Mathlib: 2ab ≤ a² + b² for real numbers", code:
+`import Mathlib
+
+theorem two_mul_le_sq_add_sq' (a b : ℝ) : 2 * a * b ≤ a ^ 2 + b ^ 2 := by
+  -- (a - b)² is never negative, and expanding it gives the inequality
+  nlinarith [sq_nonneg (a - b)]` },
+  { name: "A wrong proof (Lean rejects it)", code:
+`theorem wrong (n : Nat) : n + 1 = n := by
+  omega` },
+  { name: "An unfinished proof (uses sorry)", code:
+`theorem unfinished (a b : Nat) : a * b = b * a := by
+  sorry` },
+];
+EXAMPLES.forEach((ex, i) => { const o = document.createElement("option"); o.value = i; o.textContent = ex.name; $("example").appendChild(o); });
+$("example").onchange = () => { const ex = EXAMPLES[$("example").value]; if (ex) { $("code").value = ex.code; reset(); } };
+$("code").oninput = reset;
+
+// Server status: models for generation, and whether Lean / Mathlib are installed.
+Promise.all([fetch("/api/info").then(r => r.json()), fetch("/api/lean/info").then(r => r.json())]).then(([info, lean]) => {
+  for (const m of info.models) {
+    labels[m.name] = m.label || m.name;
+    const o = document.createElement("option"); o.value = m.name; o.textContent = labels[m.name]; $("model").appendChild(o);
+  }
+  $("model").value = info.default;
+  mathlib = lean.mathlib;
+  $("meta").innerHTML = [`${info.models.length} models`, lean.lean ? "Lean 4" : "Lean not installed", lean.mathlib ? "Mathlib" : "no Mathlib"]
+    .map(t => `<span class="chip">${t}</span>`).join("");
+  if (!lean.lean) { $("check").disabled = true; $("checkStatus").textContent = "Lean isn't installed on the server."; }
+  for (const o of $("example").options) if (!mathlib && EXAMPLES[o.value]?.mathlib) o.disabled = true;
+}).catch(() => {
+  $("offline").hidden = false; $("gen").disabled = true; $("check").disabled = true;
+  $("meta").innerHTML = `<span class="chip">demo server not running</span>`;
+});
+
+// ---- 01: generate. A style example steers models to Lean 4 (they default to Lean 3), and plain-English
+// comments carry far more fingerprint signal than tactics, which are very predictable.
+const STYLE = "```lean\ntheorem and_swap (p q : Prop) (h : p ∧ q) : q ∧ p := by\n  -- split the hypothesis into its two parts\n  obtain ⟨hp, hq⟩ := h\n  -- put the two parts back together in the other order\n  exact ⟨hq, hp⟩\n\ntheorem succ_pos' (n : Nat) : 0 < n + 1 := by\n  -- work on each shape of n separately\n  induction n with\n  | zero =>\n    -- 0 < 1 is a simple numeric fact\n    decide\n  | succ k ih =>\n    -- a linear arithmetic fact, which omega proves\n    omega\n```";
+const prompt = goal => `Write a Lean 4 proof that ${goal}.\n\nRules: Lean 4 syntax exactly like the example below${mathlib ? "; you may start with `import Mathlib`" : " (core Lean 4 only, no imports; write `Nat`, not `ℕ`)"}. ` +
+  "Use tactic style (`:= by`). Above every tactic, write a `--` comment explaining that step in your own words. " +
+  "Reply with only the code, in one ```lean block.\n\nExample of the style:\n" + STYLE;
+const extract = t => { const m = t.match(/```(?:lean4?|)\s*\n([\s\S]*?)```/); return (m ? m[1] : t).trim(); };
+
+$("gen").onclick = async () => {
+  const btn = $("gen"), m = $("model").value;
+  btn.disabled = true; btn.classList.add("busy"); $("genLabel").textContent = "Writing"; $("genStatus").textContent = "";
+  try {
+    // Proofs are predictable, so a higher temperature leaves more room for the fingerprint; top-p 1 keeps all of it.
+    const r = await post("/api/generate", { model: m, prompt: prompt($("goal").value), watermark: true, temperature: 1.2, top_p: 1.0, max_new_tokens: 400 });
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    const d = await r.json();
+    $("code").value = extract(d.text || ""); $("example").value = "";
+    $("genStatus").textContent = `Fingerprinted · ${labels[m] || m}` + (d.seconds != null ? ` · ${d.seconds}s` : "") + (d.load_seconds > 1 ? ` (+${d.load_seconds}s load)` : "");
+    await checkBoth();
+  } catch (e) { $("genStatus").textContent = e.message; }
+  btn.disabled = false; btn.classList.remove("busy"); $("genLabel").textContent = "Write a fingerprinted proof";
+};
+
+// ---- 02: check. Lean and the fingerprint run side by side on the same code.
+function card(el, cls, head, detail) { el.className = cls; el.querySelector("b").innerHTML = head; el.querySelector("p").innerHTML = detail; }
+function reset() {
+  card($("aLean"), "idle", "Not checked yet", "Lean either accepts every step or shows where the proof breaks.");
+  card($("aWho"), "idle", "Not checked yet", "Every model signs with its own key, so the check names the writer.");
+  $("sum").textContent = ""; $("msgs").replaceChildren(); $("checkStatus").textContent = "";
+}
+
+async function checkBoth() {
+  const code = $("code").value;
+  if (!code.trim()) return;
+  const btn = $("check");
+  btn.disabled = true; btn.classList.add("busy"); $("checkLabel").textContent = "Checking";
+  $("checkStatus").textContent = /^\s*import\s+Mathlib/m.test(code) ? "Loading Mathlib takes 10–30 s…" : "";
+  try {
+    const [rl, rf] = await Promise.all([post("/api/lean", { code }), post("/api/detect", { text: code })]);
+    if (!rl.ok) throw new Error((await rl.json()).detail || rl.statusText);
+    const L = await rl.json(), F = rf.ok ? await rf.json() : null;
+
+    if (L.ok) card($("aLean"), "yes", "Proof checks", "Lean verified every step. No gaps, no unproved assumptions.");
+    else if (L.blocked) card($("aLean"), "", "Not checked", esc(L.messages[0]?.text || "This code does more than prove things."));
+    else if (L.sorry) card($("aLean"), "weak", "Unfinished proof", "Part of it is left as <code>sorry</code>: a placeholder, not a proof.");
+    else card($("aLean"), "", "Proof fails", "Lean found a step that doesn't follow. The messages below show where.");
+
+    const top = F && F.models.slice().sort((a, b) => a.evidence_p - b.evidence_p)[0];
+    const writer = F && F.best && F.matches.includes(F.best) ? F.best : null;
+    if (writer) {
+      const m = F.models.find(x => x.name === writer);
+      card($("aWho"), "yes", esc(labels[writer] || writer), `Its fingerprint is in this proof: chance of a fluke ${fluke(m.evidence_p)}, ${m.num_scored} tokens scored.`);
+    } else if (top && top.evidence_p < 0.001) {
+      card($("aWho"), "weak", "A weak trace", `Closest: ${esc(labels[top.name] || top.name)} (chance of a fluke ${fluke(top.evidence_p)}), not enough to name it.`);
+    } else {
+      card($("aWho"), "", "No model's fingerprint", (top && top.num_scored < 40)
+        ? "Too little text to tell. Proofs are very predictable, so short ones carry little signal."
+        : "Nothing ties this proof to any model on the server. A person may have written it.");
+    }
+
+    const who = writer ? esc(labels[writer] || writer) : null;
+    $("sum").innerHTML = L.ok && who ? `<strong>Provably correct, and provably written by ${who}.</strong>`
+      : L.ok ? "<strong>Correct, but no model's fingerprint.</strong> The proof checks; nothing shows a model on this server wrote it."
+      : who ? `<strong>Written by ${who}, but wrong.</strong> The fingerprint names the writer; Lean found the mistake.`
+      : "";
+    $("checkStatus").textContent = L.blocked ? "" : `Lean · ${L.seconds}s`;
+    const box = $("msgs"); box.replaceChildren();
+    if (!L.blocked) for (const m of L.messages) {
+      const el = document.createElement("div"); el.className = "msg " + m.severity;
+      const b = document.createElement("b"); b.textContent = m.severity + (m.line ? ` · line ${m.line}` : "");
+      el.append(b, m.text); box.appendChild(el);
+    }
+  } catch (e) { $("checkStatus").textContent = e.message; }
+  btn.disabled = false; btn.classList.remove("busy"); $("checkLabel").textContent = "Check both";
+}
+$("check").onclick = checkBoth;
+reset();
+})();
+</script>
+<script>
+(() => {
+  if (location.pathname.startsWith("/results/")) return;  // served by the demo: "/" is the demo
+  document.querySelectorAll('a[href="/"], a[href^="/#"]').forEach(a => {
+    a.removeAttribute("href"); a.setAttribute("aria-disabled", "true"); a.style.cursor = "default"; a.style.opacity = ".6";
+    a.title = "The live demo runs on your own machine: .venv/bin/python -m demo.server";
+    const label = a.querySelector("span") || a;
+    if (!/runs locally/.test(label.textContent)) label.textContent = label.textContent.replace(/\s*[↗→]\s*$/, "") + " (runs locally)";
+  });
+})();
+</script>

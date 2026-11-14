@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="#running-the-project">Run it</a> ·
   <a href="#results">Results</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#quick-start">Quick start</a> ·
@@ -26,6 +27,90 @@
 | **Edit-robust** | Each edit only erases the ~4 tokens around it. On GPT-2, 200-token replies are still caught every time with 30% of their words replaced. |
 | **Attributable** | Per-model keys from one master secret say *which* model wrote a text, and which part of a mixed document. |
 | **Fast** | 97% of native MLX speed on an M4 Pro. The key hashing overlaps with the GPU. |
+
+## Running the project
+
+You need Python 3.10 or newer. Everything below runs from the repository root.
+
+**1. Create a virtual environment and install.** Pick the extras you need:
+
+```bash
+python3 -m venv .venv
+```
+
+```bash
+.venv/bin/pip install -e '.[demo,test]'
+```
+
+| Extra | Adds | Needed for |
+|---|---|---|
+| *(none)* | numpy, scipy | the core `Watermarker` / `ModelRegistry` library |
+| `hf` | torch, transformers | Hugging Face generation and detection |
+| `demo` | torch, transformers, fastapi, uvicorn | the demo website |
+| `test` | pytest | the test suite |
+
+On Apple Silicon, also install MLX to use LM Studio models and the fast MLX
+sampler (it isn't in any extra):
+
+```bash
+.venv/bin/pip install mlx-lm
+```
+
+**2. Run the tests** (about 30 seconds, no model downloads):
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+**3. Start the demo website:**
+
+```bash
+.venv/bin/python -m demo.server
+```
+
+Then open <http://localhost:8000>. The results site is served from the same
+server at <http://localhost:8000/results/>. The first time you generate with a
+model it is downloaded from Hugging Face and loaded, so expect a wait. See
+[Demo website](#demo-website) for what the page does and the environment
+variables it reads (`RIPPLE_FP_MODELS`, `RIPPLE_FP_KEY`, `PORT`, …).
+
+To use a different port:
+
+```bash
+PORT=8001 .venv/bin/python -m demo.server
+```
+
+**4. Or run the command-line example** with any Hugging Face causal LM. It
+generates watermarked text, edits it, and prints the detector's verdict on the
+original, the edited copy, and a plain sample:
+
+```bash
+RIPPLE_FP_KEY=$(python3 -c "import secrets;print(secrets.token_hex(32))") .venv/bin/python examples/demo_hf.py gpt2
+```
+
+**Optional: Lean proof checking.** The demo's Proofs page checks proofs with
+Lean. Without Lean installed the rest of the demo still works. To enable it:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+```
+
+```bash
+cd demo && lake +leanprover-community/mathlib4:lean-toolchain new proofs math && cd proofs && lake exe cache get
+```
+
+The last step downloads prebuilt Mathlib (a few GB). Set `LEAN_BIN` if `lean`
+isn't on your `PATH` or in `~/.elan/bin`.
+
+**Static results site only** (no models, no Python dependencies):
+
+```bash
+python3 -m http.server 8010
+```
+
+Then open <http://localhost:8010/site/>. Serve from the repository root, not
+from `site/`, because the pages load images from `docs/`. The Proofs page's
+Lean checker needs the demo server.
 
 ## Results
 
@@ -281,10 +366,7 @@ longer checks out.
 
 ## Development
 
-```bash
-python3 -m venv .venv && .venv/bin/pip install -e '.[test]'
-.venv/bin/python -m pytest -q
-```
+Setup and tests are covered in [Running the project](#running-the-project).
 
 To rebuild the charts (MLX on Apple Silicon; about 4 minutes):
 

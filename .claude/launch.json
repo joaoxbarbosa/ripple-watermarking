@@ -39,6 +39,13 @@
       ],
       "port": 8010,
       "autoPort": false
+    },
+    {
+      "name": "writeup",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "http.server", "8020", "--bind", "127.0.0.1"],
+      "port": 8020,
+      "autoPort": false
     }
   ]
 }

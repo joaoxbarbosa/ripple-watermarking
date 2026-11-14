@@ -14,7 +14,8 @@
 .verdict p { font-size: 16px; opacity: .8; }
 .verdict.wait { background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--hatch) 6px 7px); color: var(--ink); }
 .verdict.wait p { opacity: 1; color: var(--muted); }
-.verdict.wait b { font-size: 26px; }
+.verdict.wait b { font-size: 26px; font-family: var(--sans); font-weight: 700; letter-spacing: -0.02em; }
+.verdict .btnrow { margin-top: 8px; }
 .matrix { border-collapse: collapse; font: 500 13px var(--mono); }
 .matrix th, .matrix td { border: 1px solid var(--line); padding: 0; text-align: center; }
 .matrix th { font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; }
@@ -27,62 +28,60 @@
 .key i { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--line); vertical-align: -2px; margin-right: 6px; }
 .bar { height: 8px; border: 1px solid var(--line); background: var(--bg); width: 120px; display: inline-block; vertical-align: middle; }
 .bar > span { display: block; height: 100%; background: var(--ink); }
-.shot { border: 1px solid var(--line); display: block; width: 100%; height: auto; }
 </style>
 
 <div class="wrap">
   <div class="top">
     <a class="brand" href="index.html"><i></i>Ripple Fingerprint</a>
-    <nav class="top-right" aria-label="Pages">
-      <a class="btn" href="index.html">Results</a>
-      <a class="btn" href="models.html" aria-current="page">Every model</a>
-      <a class="btn" href="model-card.html">Model card</a>
+    <nav class="top-right" aria-label="Demo">
+      <a class="btn" href="/">Open the live demo ↗</a>
       <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Dark</button>
     </nav>
   </div>
+  <nav class="story" aria-label="Story"><a href="/"><b>Step 1</b><span>Try the live demo</span></a><a href="model-card.html"><b>Step 2</b><span>What it is</span></a><a href="index.html"><b>Step 3</b><span>Does it work?</span></a><a href="models.html" aria-current="page"><b>Step 4</b><span>Every model</span></a></nav>
 
   <div class="hero">
     <div class="hero-card">
-      <div class="label"><b>Every model</b>who wrote it?</div>
+      <div class="label"><b>Step 4</b>every model, every key</div>
       <h1>Can it tell the models apart?</h1>
       <p class="sub">Each model signs its text with its own key. We asked every model the same questions, then checked every reply against every key. A reply should only match the key of the model that wrote it.</p>
       <div class="chips" id="meta"></div>
+      <div class="btnrow"><a class="btn primary" href="/#lineup">Run it live in the demo ↗</a></div>
     </div>
   </div>
 
   <div class="verdict wait" id="verdict">
-    <b>Waiting for data</b>
-    <p>The lineup hasn't been run yet. Start the demo (<code>.venv/bin/python -m demo.server</code>), then run <code>docs/run_lineup.py</code>. It writes <code>site/models.js</code>, and this page fills in.</p>
+    <b>No saved eight-model run yet</b>
+    <p>Run the same check live instead: the demo sends one question to all eight models and fills in this grid in a couple of minutes.</p>
+    <div class="btnrow"><a class="btn primary" href="/#lineup">Run every model in the demo ↗</a></div>
   </div>
 
   <div id="body" hidden>
     <div class="gap"></div>
     <div class="block">
-      <div class="label"><b>01</b>Who wrote it × which key matched</div>
-      <p class="lead">Rows are the model that wrote the replies. Columns are the key used to check them. A filled square means the replies matched that key. Only the diagonal should be filled.</p>
+      <div class="label"><b>01</b>The grid</div>
+      <h2 class="q">Does one model's key ever match another model's text?</h2>
+      <p class="answer" id="a-grid"></p>
+      <p class="lead" id="lead-grid">Each row is one model's replies. Each column checks those replies against one model's key, numbered the same way as the rows. A cell shows how many replies that key recognised. The diagonal is every model checked against its own key, so the ideal grid is full marks on the diagonal and empty everywhere else. A filled cell off the diagonal would mean a reply was pinned on the wrong model.</p>
       <div class="tablewrap"><table class="matrix" id="matrix"></table></div>
-      <div class="key"><span><i style="background:var(--ink)"></i>matched (count of replies)</span><span><i></i>no match</span><span><i style="background:repeating-linear-gradient(-45deg,var(--bg) 0 4px,var(--ink) 4px 5px)"></i>wrong model named</span></div>
+      <div class="key"><span><i style="background:var(--ink)"></i>own key recognised the replies (how many)</span><span><i></i>not recognised</span><span><i style="background:repeating-linear-gradient(-45deg,var(--bg) 0 4px,var(--ink) 4px 5px)"></i>another model's key matched (false match)</span></div>
     </div>
 
     <div class="gap"></div>
     <div class="block">
       <div class="label"><b>02</b>Each model</div>
+      <h2 class="q">How strong is each model's signature?</h2>
+      <p class="answer" id="a-table"></p>
       <p class="lead">"Signal strength" is how far the signed replies stand out from ordinary text (z-score). About 5 is enough to name a model. Confident chat models make fewer random choices, so their signal is weaker.</p>
       <div class="tablewrap"><table id="table"></table></div>
     </div>
   </div>
 
-  <div class="gap"></div>
-  <div class="block">
-    <div class="label"><b>03</b>The same check, live in the demo</div>
-    <p class="lead">Section 04 of the demo, "Run every model", sends one prompt to every model and fills in this grid as the answers come back.</p>
-    <img class="shot" src="img/every-model.webp" alt="The demo's who-wrote × which-key grid for eight models: only the diagonal is filled">
-  </div>
 
-  <div class="cta">
-    <div><strong>How it works, in plain words</strong><span>What it's for, how reliable it is, and what breaks it.</span></div>
-    <a class="btn" href="model-card.html">Open the model card →</a>
-  </div>
+  <nav class="nextbar" aria-label="Next page">
+    <a class="back" href="index.html"><b>Back · step 3</b><span>Does it work?</span><small>The measurements on one model</small></a>
+    <a class="next" href="/"><b>Back to the start</b><span>Try it live</span><small>Run every model on your own prompt in the demo</small></a>
+  </nav>
 
   <footer>
     <div id="foot"></div>
@@ -118,13 +117,14 @@ v.innerHTML = `<b>${nNamed} of ${total}</b><p>replies were named as the model th
 $("body").hidden = false;
 $("meta").innerHTML = [`${N} models`, `${L.prompts.length} prompts each`, `T=${L.settings.temperature}`, `≤ ${L.settings.max_new_tokens} tokens`, L.generated].map(t => `<span class="chip">${t}</span>`).join("");
 
-let h = `<thead><tr><th class="who">wrote ↓ · key →</th>${M.map((_, j) => `<th title="${esc(M[j].label)}">${j + 1}</th>`).join("")}</tr></thead><tbody>`;
+let h = `<thead><tr><th class="who">replies from ↓ · checked with key →</th>${M.map((_, j) => `<th title="${esc(M[j].label)}">${j + 1}</th>`).join("")}</tr></thead><tbody>`;
 M.forEach((m, i) => {
   h += `<tr><th class="who">${i + 1} · ${esc(m.label)}</th>`;
   M.forEach((k, j) => {
     const n = byModel[i].filter(r => r.matches.includes(k.name)).length, of = byModel[i].length;
     const cls = n === 0 ? "no" : i === j ? "yes" : "bad";
-    h += `<td class="${cls}" title="${esc(m.label)}'s replies checked with ${esc(k.label)}'s key: ${n} of ${of} matched">${n === 0 ? "·" : `${n}/${of}`}</td>`;
+    // On the diagonal always show the count, so a miss reads as "2/6" rather than vanishing.
+    h += `<td class="${cls}" title="${esc(m.label)}'s replies checked with ${esc(k.label)}'s key: ${n} of ${of} recognised">${n === 0 && i !== j ? "·" : `${n}/${of}`}</td>`;
   });
   h += "</tr>";
 });
@@ -139,6 +139,28 @@ M.forEach((m, i) => {
     `<td class="num">${wz.toFixed(1)}</td><td class="num">${Math.round(median(rs.map(r => r.tokens)))}</td></tr>`;
 });
 $("table").innerHTML = t + "</tbody>";
+const zs = M.map((m, i) => [m.label, median(byModel[i].map(r => r.z[i])), byModel[i].filter(named).length, byModel[i].length]).sort((x, y) => y[1] - x[1]);
+const missed = M.map((m, i) => [m.label, byModel[i].filter(r => r.matches.includes(m.name)).length, byModel[i].length]).filter(x => x[1] < x[2]);
+const offCells = N * (N - 1);
+$("a-grid").textContent = (wrong === 0
+  ? `No. In all ${offCells} off-diagonal checks, no key matched a reply from a different model.`
+  : `Yes, ${wrong} replies matched a different model's key.`) +
+  (missed.length ? ` The only gaps are misses on the diagonal: ${missed.map(x => `${x[0]}'s own key recognised ${x[1]} of its ${x[2]} replies`).join(", and ")}. A miss leaves a reply unattributed; it never points at the wrong model.` : "");
+const weak = zs.filter(z => z[2] < z[3]);
+$("a-table").textContent = `Strongest: ${zs[0][0]}. Weakest: ${zs.at(-1)[0]}.` + (weak.length ? ` Only ${weak.map(z => `${z[0]} (${z[2]} of ${z[3]})`).join(" and ")} missed some replies, and even then no wrong model was named.` : "");
+
 $("foot").textContent = `Generated ${L.generated} on the demo server.`;
+})();
+</script>
+<script>
+(() => {
+  if (location.pathname.startsWith("/results/")) return;  // served by the demo: "/" is the demo
+  // Not on the demo server (for example a shared copy): the demo isn't reachable, so say so instead of linking nowhere.
+  document.querySelectorAll('a[href="/"], a[href^="/#"]').forEach(a => {
+    a.removeAttribute("href"); a.setAttribute("aria-disabled", "true"); a.style.cursor = "default"; a.style.opacity = ".6";
+    a.title = "The live demo runs on your own machine: .venv/bin/python -m demo.server";
+    const label = a.querySelector("span") || a;
+    if (!/runs locally/.test(label.textContent)) label.textContent = label.textContent.replace(/\s*[↗→]\s*$/, "") + " (runs locally)";
+  });
 })();
 </script>

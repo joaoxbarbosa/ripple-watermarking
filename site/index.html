@@ -34,26 +34,28 @@
 <div class="wrap">
   <div class="top">
     <a class="brand" href="index.html"><i></i>Ripple Fingerprint</a>
-    <nav class="top-right" aria-label="Pages">
-      <a class="btn" href="index.html" aria-current="page">Results</a>
-      <a class="btn" href="models.html">Every model</a>
-      <a class="btn" href="model-card.html">Model card</a>
+    <nav class="top-right" aria-label="Demo">
+      <a class="btn" href="/">Open the live demo ↗</a>
       <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Dark</button>
     </nav>
   </div>
+  <nav class="story" aria-label="Story"><a href="/"><b>Step 1</b><span>Try the live demo</span></a><a href="model-card.html"><b>Step 2</b><span>What it is</span></a><a href="index.html" aria-current="page"><b>Step 3</b><span>Does it work?</span></a><a href="models.html"><b>Step 4</b><span>Every model</span></a></nav>
 
   <div class="hero">
     <div class="hero-card">
-      <div class="label"><b>Results</b>measured, not claimed</div>
-      <h1>A watermark you can't see, that survives editing</h1>
-      <p class="sub">Every fingerprinted token is an exact sample from the model's own distribution, so the text reads the same as normal sampling. The key holder gets an exact p-value for whether a model wrote it. This page shows one full run, misses included.</p>
+      <div class="label"><b>Step 3</b>the measurements</div>
+      <h1>Does it work?</h1>
+      <p class="answer" id="a0" style="font-size:20px"></p>
+      <p class="sub">We asked a small chat model 16 everyday questions twice: once with the signature on, once with it off. Then we checked every reply. Each section below asks one question and answers it, misses included.</p>
       <div class="chips" id="meta"></div>
-      <div><a class="btn primary" href="model-card.html">Read the model card →</a></div>
+      <div class="btnrow"><a class="btn primary" href="#s-summary">See the answers ↓</a><a class="btn ghost" href="/">Try it live ↗</a></div>
     </div>
   </div>
 
-  <div class="block">
-    <div class="row"><div class="label"><b>01</b>One reply, as the detector sees it</div><div><span class="muted">p-value </span><span class="pbig" id="sample-p"></span></div></div>
+  <div class="block" id="s-summary">
+    <div class="row"><div class="label"><b>01</b>Example</div><div><span class="muted">chance this is a fluke: </span><span class="pbig" id="sample-p"></span></div></div>
+    <h2 class="q">What does the checker see?</h2>
+    <p class="answer" id="a1"></p>
     <p class="note" id="sample-prompt"></p>
     <div class="tokens" id="tokens" aria-label="Reply tokens shaded by watermark evidence"></div>
     <div class="scale"><span>ordinary</span><i></i><span>strong evidence</span><span class="mono" style="text-decoration:underline dotted;text-underline-offset:4px">dotted</span><span>= skipped (repeated context or warm-up)</span></div>
@@ -62,14 +64,18 @@
 
   <div class="gap"></div>
   <div class="block">
-    <div class="label"><b>02</b>Detection at each threshold</div>
+    <div class="label"><b>02</b>Strictness</div>
+    <h2 class="q">How strict is the checker?</h2>
+    <p class="answer" id="a2"></p>
     <p class="lead">The threshold sets the false-alarm rate exactly. A stricter threshold misses more of the low-entropy replies.</p>
     <div class="tablewrap"><table id="thr-table"></table></div>
   </div>
 
   <div class="gap"></div>
   <div class="block panel">
-    <div class="label"><b>03</b>The evidence grows with every token</div>
+    <div class="label"><b>03</b>Evidence</div>
+    <h2 class="q">Does the evidence add up as the text gets longer?</h2>
+    <p class="answer" id="a3"></p>
     <p class="lead">Running detector score minus what ordinary text would give. Ordinary text wanders inside the shaded band; fingerprinted text climbs out of it. Thin lines are single replies, thick lines the median.</p>
     <div class="legend"><span><i style="background:var(--accent)"></i>with fingerprint</span><span><i style="background:var(--other)"></i>without</span><span><i style="background:var(--null)"></i>ordinary-text range (±2σ)</span></div>
     <svg id="ch-evidence" viewBox="0 0 900 360" role="img" aria-label="Cumulative excess score by token"></svg>
@@ -78,7 +84,9 @@
 
   <div class="gap"></div>
   <div class="block">
-    <div class="label"><b>04</b>How much text it takes</div>
+    <div class="label"><b>04</b>Length</div>
+    <h2 class="q">How much text does it need?</h2>
+    <p class="answer" id="a4"></p>
     <p class="lead" id="len-desc"></p>
   </div>
   <div class="two">
@@ -96,14 +104,18 @@
 
   <div class="gap"></div>
   <div class="block">
-    <div class="label"><b>05</b>Every reply</div>
+    <div class="label"><b>05</b>Misses</div>
+    <h2 class="q">Which replies did it miss, and why?</h2>
+    <p class="answer" id="a5"></p>
     <p class="lead">One fingerprinted and one plain reply per prompt. z is the standardized score: ordinary text sits near 0. The misses are replies where the model was close to deterministic, so there was little randomness to carry the signal.</p>
     <div class="tablewrap"><table id="per-table"></table></div>
   </div>
 
   <div class="gap"></div>
   <div class="block panel">
-    <div class="label"><b>06</b>It survives editing</div>
+    <div class="label"><b>06</b>Editing</div>
+    <h2 class="q">Does it survive someone editing the text?</h2>
+    <p class="answer" id="a6"></p>
     <p class="lead">Each full reply is edited three times at random, then re-tokenized and checked at p &lt; 10⁻⁵. An edit only spoils the four tokens around it, so the untouched runs still count. The curve starts at the unedited detection rate.</p>
     <div class="seg" role="group" aria-label="Edit type">
       <button type="button" id="rob-replace" aria-pressed="true">Replace words</button>
@@ -117,7 +129,9 @@
 
   <div class="gap"></div>
   <div class="block panel">
-    <div class="label"><b>07</b>No false alarms: the p-value is exact</div>
+    <div class="label"><b>07</b>False alarms</div>
+    <h2 class="q">Does it ever accuse text it didn't sign?</h2>
+    <p class="answer" id="a7"></p>
     <p class="lead" id="cal-desc"></p>
     <svg id="ch-cal" viewBox="0 0 900 280" role="img" aria-label="Histogram of p-values under keys that did not write the text"></svg>
     <div class="tip"></div>
@@ -125,7 +139,9 @@
 
   <div class="gap"></div>
   <div class="block">
-    <div class="label"><b>08</b>Which model wrote it?</div>
+    <div class="label"><b>08</b>Attribution</div>
+    <h2 class="q">Can it tell which model wrote it?</h2>
+    <p class="answer" id="a8"></p>
     <p class="lead">Each model gets its own key from one master secret. Five models were registered on one tokenizer, and only model A sampled the replies. Under the wrong key the score is exactly that of ordinary text, so no other model can be blamed. The registry corrects for testing every model, so it needs a bit more evidence than a single-key check.</p>
   </div>
   <div class="stats" id="att-stats" style="border-top:0"></div>
@@ -133,20 +149,23 @@
     <h3>Mixed documents: plain reply + fingerprinted reply + plain reply</h3>
     <p class="note">A span has to clear a correction for every possible stretch of text, so it needs a stronger reply than whole-text detection does.</p>
     <div class="tablewrap"><table id="span-table"></table></div>
+    <div class="btnrow"><a class="btn primary" href="models.html">See all eight models side by side →</a></div>
   </div>
 
   <div class="gap"></div>
   <div class="block panel">
-    <div class="label"><b>09</b>Fingerprinting at native speed</div>
+    <div class="label"><b>09</b>Speed</div>
+    <h2 class="q">Does it slow the model down?</h2>
+    <p class="answer" id="a9"></p>
     <p class="lead" id="speed-desc"></p>
     <svg id="ch-speed" viewBox="0 0 900 250" role="img" aria-label="Generation speed as share of native sampling"></svg>
     <div class="tip"></div>
   </div>
 
-  <div class="cta">
-    <div><strong>How it works, intended use and limits</strong><span>The model card covers the method, what it is for, and where it fails.</span></div>
-    <a class="btn" href="model-card.html">Open the model card →</a>
-  </div>
+  <nav class="nextbar" aria-label="Next page">
+    <a class="back" href="model-card.html"><b>Back · step 2</b><span>What it is</span><small>The plain-language model card</small></a>
+    <a class="next" href="models.html"><b>Next · step 4</b><span>Can it tell models apart?</span><small>Eight models, every reply checked against every key</small></a>
+  </nav>
 
   <footer>
     <div id="foot"></div>
@@ -319,9 +338,9 @@ drawRob("replace");
 // ---------- calibration
 (() => {
   const C = R.calibration; const svg = $("ch-cal");
-  $("cal-desc").textContent = `p-values from ${C.tests.toLocaleString()} tests of text a key did not write (${R.n_prompts * 2} replies × ${C.keys} other keys). If the test is exact they are uniform. ${C.flagged} of them fell below 10⁻⁵; the smallest was ${C.min_p.toExponential(1)}. ${(C.share_below_01 * 100).toFixed(1)}% fell below 0.01, against 1% expected.`;
+  $("cal-desc").textContent = `How we tested it: we took all ${R.n_prompts * 2} replies and checked each one with ${C.keys} keys that did not write it, ${C.tests.toLocaleString()} checks in all. Each check gives a "fluke score" from 0 to 1, and the checker only says "signed" when that score is below 0.00001. On unsigned text the scores should land anywhere between 0 and 1 by chance, so the bars below should be roughly flat. They are. The lowest score in all ${C.tests.toLocaleString()} checks was ${C.min_p.toFixed(4)}, about ${Math.round(C.min_p / 1e-5)} times above the line.`;
   const mx = Math.max(...C.bins) * 1.15, expct = C.tests / 20;
-  const F = frame(svg, {w: 900, h: 280, x0: 0, x1: 1, y0: 0, y1: mx, xt: [0, .2, .4, .6, .8, 1], yt: ticks(0, mx, 4), xlab: "p-value", ylab: "tests", r: 150});
+  const F = frame(svg, {w: 900, h: 280, x0: 0, x1: 1, y0: 0, y1: mx, xt: [0, .2, .4, .6, .8, 1], yt: ticks(0, mx, 4), xlab: "fluke score (p-value): the checker only says \"signed\" at the far left, below 0.00001", ylab: "checks", r: 150});
   const bw = (F.w - F.l - F.r) / 20; const tip = svg.parentElement.querySelector(".tip");
   C.bins.forEach((c, i) => {
     const x = F.l + i * bw, bar = el("rect", {x: x + 1, y: F.Y(c), width: bw - 2, height: F.Y(0) - F.Y(c), fill: "var(--accent)"}, svg);
@@ -331,7 +350,7 @@ drawRob("replace");
   });
   el("line", {x1: F.l, x2: F.w - F.r, y1: F.Y(0), y2: F.Y(0), class: "baseline"}, svg);
   el("line", {x1: F.l, x2: F.w - F.r, y1: F.Y(expct), y2: F.Y(expct), stroke: "var(--ink)", "stroke-width": 1.5, "stroke-dasharray": "5 4"}, svg);
-  const tx = el("text", {x: F.w - F.r + 10, y: F.Y(expct) + 4, class: "lab"}, svg); tx.textContent = "expected if uniform";
+  const tx = el("text", {x: F.w - F.r + 10, y: F.Y(expct) + 4, class: "lab"}, svg); tx.textContent = "flat = working as designed";
 })();
 
 // ---------- attribution
@@ -373,6 +392,35 @@ drawRob("replace");
     rows.map(r => `<tr><td>${r.pr}</td><td class="num">${r.wz.toFixed(1)}</td><td class="num">${pfmt(r.wp)}</td><td>${r.wp < -5 ? '<span class="pill ok">detected</span>' : '<span class="pill no">missed</span>'}</td><td class="num">${r.pz.toFixed(1)}</td><td class="num">${pfmt(r.pp)}</td></tr>`).join("") + "</tbody>";
 })();
 
+// ---------- one-line answers, in plain words
+(() => {
+  const set = (id, t) => { const e = $(id); if (e) e.textContent = t; };
+  const loose = W.log10_p.filter(v => v < -2).length;
+  set("a0", `Mostly yes. It caught ${W.flagged} of ${W.n} signed replies and never once flagged an unsigned one.`);
+  set("a1", "Each word is shaded by how much it points to the signature. No single word proves anything, but together they add up.");
+  set("a2", `Very strict by default: it only accuses text when the odds of a fluke are below 1 in 100,000. Loosen that to 1 in 100 and it catches ${loose} of ${W.n}.`);
+  set("a3", "Yes. Unsigned text stays inside the grey band no matter how long it gets. Signed text keeps climbing.");
+  set("a4", hits.length ? `About ${Math.round(median(hits))} tokens (roughly ${Math.round(median(hits) * 0.75)} words) for a typical reply. Some predictable replies never get there within ${R.settings.max_new_tokens}.` : "Not enough data.");
+  set("a5", `${W.n - W.flagged} of ${W.n} missed at the strict setting. Those were replies the model was almost certain about word by word, which leaves little room for the signature.`);
+  const rb = R.robustness.replace, i20 = R.robustness.fraction.indexOf(0.2);
+  set("a6", `Light editing, yes. With 1 in 5 words replaced it still caught ${Math.round(rb.watermarked[i20])}% of replies. Rewriting half the words erases it.`);
+  set("a7", R.calibration.flagged === 0 ? `No. We checked unsigned text ${R.calibration.tests.toLocaleString()} times, and it never once said "signed".` : `Rarely: ${R.calibration.flagged} false alarms in ${R.calibration.tests.toLocaleString()} checks of unsigned text.`);
+  set("a8", `Yes. With five models registered it named the right one ${R.attribution.correct} times and a wrong one ${R.attribution.wrong} times.`);
+  set("a9", `Barely. It runs at ${Math.round(spd.share * 100)}% of normal speed.`);
+})();
+
 $("foot").textContent = `Generated ${R.generated} from ${R.n_prompts * 2} replies of ${R.model}.`;
+})();
+</script>
+<script>
+(() => {
+  if (location.pathname.startsWith("/results/")) return;  // served by the demo: "/" is the demo
+  // Not on the demo server (for example a shared copy): the demo isn't reachable, so say so instead of linking nowhere.
+  document.querySelectorAll('a[href="/"], a[href^="/#"]').forEach(a => {
+    a.removeAttribute("href"); a.setAttribute("aria-disabled", "true"); a.style.cursor = "default"; a.style.opacity = ".6";
+    a.title = "The live demo runs on your own machine: .venv/bin/python -m demo.server";
+    const label = a.querySelector("span") || a;
+    if (!/runs locally/.test(label.textContent)) label.textContent = label.textContent.replace(/\s*[↗→]\s*$/, "") + " (runs locally)";
+  });
 })();
 </script>

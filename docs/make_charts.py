@@ -187,16 +187,17 @@ def main(path: str):
     if sp_path.exists():
         sp = json.loads(sp_path.read_text())
         rows = [{"prompt": r["prompt"], "w": float(np.median(r["with"])), "p": float(np.median(r["without"]))} for r in sp["rows"]]
-        how = f"median of {sp['reps']} alternating runs per prompt, {sp['max_new_tokens']} tokens"
+        how = f"median of {sp["reps"]} alternating runs"
     else:
         rows = [{"prompt": w["prompt"], "w": w["tok_s"], "p": p["tok_s"]} for w, p in zip(wmk, plain)]
         how = "one run per prompt"
     rows.sort(key=lambda r: r["p"])
     ws = np.array([r["w"] for r in rows]); ps = np.array([r["p"] for r in rows])
-    ratio = np.median(ws / ps)
+    r = ws / ps
     fig, ax = figure("Fingerprinting doesn't slow generation down",
-                     f"Tokens per second for each prompt ({how}) · median {np.median(ws):.1f} with vs "
-                     f"{np.median(ps):.1f} without ({ratio:.0%})", size=(8, 5.8))
+                     f"Tokens per second, {how} · {np.median(r):.0%} of plain speed "
+                     f"({r.min():.0%}–{r.max():.0%})", size=(8, 5.8))
+    ratio = np.median(r)
     fig.subplots_adjust(left=0.36, right=0.96, top=0.78, bottom=0.10)
     pairs = [({"prompt": r["prompt"]}, None) for r in rows]
     yy = np.arange(len(pairs))

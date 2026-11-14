@@ -31,9 +31,20 @@
   * { box-sizing: border-box; border-radius: 0; }
   .theme { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 10px; }
   .top-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .pages { display: flex; gap: 14px; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
-  .pages a { color: var(--muted); text-decoration: none; }
-  .pages a:hover { color: var(--ink); }
+  .story { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); background: var(--bg); margin-top: 20px; }
+  .story a { display: grid; gap: 2px; justify-items: center; text-align: center; padding: 12px 16px; text-decoration: none; color: var(--ink); border-right: 1px solid var(--line); transition: background .12s; }
+  .story a:last-child { border-right: 0; }
+  .story a b { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .story a span { font-size: 15px; font-weight: 600; }
+  .story a:hover { background: var(--field); }
+  .story a[aria-current="page"] { background: var(--ink); color: var(--bg); }
+  .story a[aria-current="page"] b { color: var(--bg); opacity: .7; }
+  @media (max-width: 700px) { .story { grid-template-columns: 1fr 1fr; } .story a:nth-child(2) { border-right: 0; } .story a:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+  .nextbar { display: block; border: 1px solid var(--line); margin-top: 40px; background: var(--ink); color: var(--bg); padding: 24px 28px; text-decoration: none; }
+  .nextbar b { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .08em; opacity: .7; display: block; }
+  .nextbar span { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; display: block; margin: 4px 0; }
+  .nextbar small { font-size: 13px; opacity: .75; }
+  .nextbar:hover { background: var(--bg); color: var(--ink); }
   html { background: var(--bg); }
   body { margin: 0; color: var(--ink); font: 15px/1.55 var(--sans);
     background: linear-gradient(var(--veil), var(--veil)), var(--art) center / var(--art-size) var(--art-repeat) fixed, var(--bg);
@@ -234,11 +245,13 @@
   <div class="top">
     <div class="brand"><i></i>Ripple Fingerprint</div>
     <div class="top-right">
-      <nav class="pages" aria-label="Pages"><a href="/results/">Results</a><a href="/results/models.html">Every model</a></nav>
+      
       <div class="meta" id="model">loading model…</div>
       <button class="theme" id="theme" aria-label="Toggle dark mode">Dark</button>
     </div>
   </div>
+
+  <nav class="story" aria-label="Story"><a href="/" aria-current="page"><b>Step 1</b><span>Try the live demo</span></a><a href="/results/model-card.html"><b>Step 2</b><span>What it is</span></a><a href="/results/"><b>Step 3</b><span>Does it work?</span></a><a href="/results/models.html"><b>Step 4</b><span>Every model</span></a></nav>
 
   <div class="hero">
     <div class="hero-card">
@@ -318,7 +331,7 @@
     <div id="heat"></div>
   </section>
 
-  <section class="lineup-panel">
+  <section class="lineup-panel" id="lineup">
     <div class="label"><b>04</b>Every model, one prompt<span class="heat-for" id="luMeta"></span></div>
     <p class="lu-sub">Each model answers the prompt from 01 with its own key, one after another. Then every answer is checked against every key.
       The diagonal should light up and everything else should stay blank: a key only recognises its own model's text.</p>
@@ -332,6 +345,8 @@
       <div class="lu-text" id="luText"></div>
     </div>
   </section>
+
+  <a class="nextbar" href="/results/model-card.html"><b>Next · step 2</b><span>What it is →</span><small>The plain-language model card: what it does, how reliable it is, what breaks it</small></a>
 
   <footer><span id="foot"></span><span>Key stays on the server</span></footer>
 </div>

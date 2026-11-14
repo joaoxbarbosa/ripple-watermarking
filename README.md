@@ -63,8 +63,9 @@ the vocabulary.
 ![Speed as a share of native MLX sampling: 71% before optimizing, 97% now, 94% with the visualizer trace](docs/chart-speed.png)
 
 **Fingerprint on or off, generation runs just as fast.** Each prompt is run
-several times both ways, alternating so background load hits both equally.
-The two dots overlap prompt by prompt.
+three times both ways, alternating so background load hits both equally.
+Fingerprinted generation comes in at a median 102% of plain speed (95–117%
+across prompts), so what's left is noise.
 
 ![Tokens per second for each prompt with and without the fingerprint: the pairs overlap](docs/chart-speed-paired.png)
 

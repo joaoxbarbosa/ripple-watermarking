@@ -44,20 +44,19 @@ pre { margin: 0; font: 13px/1.6 var(--mono); background: var(--field); border: 1
 <div class="wrap">
   <div class="top">
     <a class="brand" href="index.html"><i></i>Ripple Fingerprint</a>
-    <nav class="top-right" aria-label="Pages">
-      <a class="btn" href="index.html">Results</a>
-      <a class="btn" href="models.html">Every model</a>
-      <a class="btn" href="model-card.html" aria-current="page">Model card</a>
+    <nav class="top-right" aria-label="Demo">
+      <a class="btn" href="/">Open the live demo ↗</a>
       <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">Dark</button>
     </nav>
   </div>
+  <nav class="story" aria-label="Story"><a href="/"><b>Step 1</b><span>Try the live demo</span></a><a href="model-card.html" aria-current="page"><b>Step 2</b><span>What it is</span></a><a href="index.html"><b>Step 3</b><span>Does it work?</span></a><a href="models.html"><b>Step 4</b><span>Every model</span></a></nav>
 
   <div class="hero">
     <div class="hero-card">
-      <div class="label"><b>Model card</b>ripple-fingerprint 0.1.0</div>
+      <div class="label"><b>Step 2</b>model card · ripple-fingerprint 0.1.0</div>
       <h1>Ripple Fingerprint</h1>
       <p class="sub">An invisible signature that an AI model writes into its own text, so you can later prove which of your models wrote something.</p>
-      <div><a class="btn primary" href="index.html">See the results and stats →</a></div>
+      <div class="btnrow"><a class="btn primary" href="index.html">Next: does it work? →</a><a class="btn ghost" href="/">Try it live ↗</a></div>
     </div>
   </div>
 
@@ -69,8 +68,9 @@ pre { margin: 0; font: 13px/1.6 var(--mono); background: var(--field); border: 1
   </div>
 
   <div class="gap"></div>
-  <div class="block"><div class="label"><b>05</b>Results at a glance</div><p class="lead" id="glance-setup">From one test run on a small chat model.</p></div>
+  <div class="block"><div class="label"><b>05</b>Results at a glance</div><h2 class="q">How well does it work?</h2><p class="lead" id="glance-setup">From one test run on a small chat model.</p></div>
   <div class="big" id="glance"></div>
+  <div class="block" style="border-top:0"><div class="btnrow"><a class="btn primary" href="index.html">See every chart and every reply →</a></div></div>
 
   <div class="gap"></div>
   <div class="cols">
@@ -135,10 +135,10 @@ reg.attribute(text).best    # "ripple-65b", or None</pre>
     </div>
   </details>
 
-  <div class="cta">
-    <div><strong>See the measurements</strong><span>Charts for detection, editing, false alarms, attribution and speed.</span></div>
-    <a class="btn" href="index.html">Open results and stats →</a>
-  </div>
+  <nav class="nextbar" aria-label="Next page">
+    <a class="back" href="/"><b>Back · step 1</b><span>Live demo</span><small>Generate and check text yourself</small></a>
+    <a class="next" href="index.html"><b>Next · step 3</b><span>Does it work?</span><small>The measurements: catches, misses, edits, false alarms, speed</small></a>
+  </nav>
 
   <footer>
     <div id="foot"></div>
@@ -192,5 +192,17 @@ $("eval-other").innerHTML = [
   `<li>Mixed documents: the signed passage was located in ${found.length} of ${R.spans.length}; no span went to a wrong model.</li>`,
 ].join("");
 $("foot").textContent = `Numbers from the run of ${R.generated} · ${R.model}`;
+})();
+</script>
+<script>
+(() => {
+  if (location.pathname.startsWith("/results/")) return;  // served by the demo: "/" is the demo
+  // Not on the demo server (for example a shared copy): the demo isn't reachable, so say so instead of linking nowhere.
+  document.querySelectorAll('a[href="/"], a[href^="/#"]').forEach(a => {
+    a.removeAttribute("href"); a.setAttribute("aria-disabled", "true"); a.style.cursor = "default"; a.style.opacity = ".6";
+    a.title = "The live demo runs on your own machine: .venv/bin/python -m demo.server";
+    const label = a.querySelector("span") || a;
+    if (!/runs locally/.test(label.textContent)) label.textContent = label.textContent.replace(/\s*[↗→]\s*$/, "") + " (runs locally)";
+  });
 })();
 </script>

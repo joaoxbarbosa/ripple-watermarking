@@ -17,7 +17,7 @@
 .verdict.wait b { font-size: 26px; font-family: var(--sans); font-weight: 700; letter-spacing: -0.02em; }
 .verdict .btnrow { margin-top: 8px; }
 .matrix { border-collapse: collapse; font: 500 13px var(--mono); }
-.matrix th, .matrix td { border: 1px solid var(--line); padding: 0; text-align: center; }
+.matrix th, .matrix td { border: 1px solid var(--line); padding: 0; text-align: center; vertical-align: middle; }
 .matrix th { font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; }
 .matrix th.who { text-align: left; color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; white-space: nowrap; }
 .matrix td { width: 56px; height: 44px; min-width: 44px; }
@@ -44,7 +44,7 @@
     <div class="hero-card">
       <div class="label"><b>Step 4</b>every model, every key</div>
       <h1>Can it tell the models apart?</h1>
-      <p class="sub">Each model signs its text with its own key. We asked every model the same questions, then checked every reply against every key. A reply should only match the key of the model that wrote it.</p>
+      <p class="sub">Every model signs with its own key. We asked each one the same questions, then checked every reply with every key.</p>
       <div class="chips" id="meta"></div>
       <div class="btnrow"><a class="btn primary" href="/#lineup">Run it live in the demo ↗</a></div>
     </div>
@@ -60,11 +60,11 @@
     <div class="gap"></div>
     <div class="block">
       <div class="label"><b>01</b>The grid</div>
-      <h2 class="q">Does one model's key ever match another model's text?</h2>
+      <h2 class="q">Was any model blamed for another's text?</h2>
       <p class="answer" id="a-grid"></p>
-      <p class="lead" id="lead-grid">Each row is one model's replies. Each column checks those replies against one model's key, numbered the same way as the rows. A cell shows how many replies that key recognised. The diagonal is every model checked against its own key, so the ideal grid is full marks on the diagonal and empty everywhere else. A filled cell off the diagonal would mean a reply was pinned on the wrong model.</p>
+      <p class="lead" id="lead-grid">Rows: who wrote it. Columns: whose key checked it. Black squares should sit only on the diagonal.</p>
       <div class="tablewrap"><table class="matrix" id="matrix"></table></div>
-      <div class="key"><span><i style="background:var(--ink)"></i>own key recognised the replies (how many)</span><span><i></i>not recognised</span><span><i style="background:repeating-linear-gradient(-45deg,var(--bg) 0 4px,var(--ink) 4px 5px)"></i>another model's key matched (false match)</span></div>
+      <div class="key"><span><i style="background:var(--ink)"></i>recognised by its own key</span><span><i></i>no match</span><span><i style="background:repeating-linear-gradient(-45deg,var(--bg) 0 4px,var(--ink) 4px 5px)"></i>wrong model matched</span></div>
     </div>
 
     <div class="gap"></div>
@@ -72,7 +72,7 @@
       <div class="label"><b>02</b>Each model</div>
       <h2 class="q">How strong is each model's signature?</h2>
       <p class="answer" id="a-table"></p>
-      <p class="lead">"Signal strength" is how far the signed replies stand out from ordinary text (z-score). About 5 is enough to name a model. Confident chat models make fewer random choices, so their signal is weaker.</p>
+      <p class="lead">Longer bar = clearer signature. About 5 is enough to name the model; wrong keys stay near 0.</p>
       <div class="tablewrap"><table id="table"></table></div>
     </div>
   </div>
@@ -113,11 +113,11 @@ const total = L.runs.length, nNamed = L.runs.filter(named).length;
 const wrong = L.runs.filter(r => r.matches.some(x => x !== r.model)).length;
 
 const v = $("verdict"); v.classList.remove("wait");
-v.innerHTML = `<b>${nNamed} of ${total}</b><p>replies were named as the model that wrote them. ${wrong === 0 ? "None was ever pinned on a different model." : `${wrong} matched a different model.`} ${N} models, ${L.prompts.length} questions each.</p>`;
+v.innerHTML = `<b>${nNamed} of ${total}</b><p>replies were traced to the right model. ${wrong === 0 ? "None was ever blamed on the wrong one." : `${wrong} matched the wrong model.`}</p>`;
 $("body").hidden = false;
 $("meta").innerHTML = [`${N} models`, `${L.prompts.length} prompts each`, `T=${L.settings.temperature}`, `≤ ${L.settings.max_new_tokens} tokens`, L.generated].map(t => `<span class="chip">${t}</span>`).join("");
 
-let h = `<thead><tr><th class="who">replies from ↓ · checked with key →</th>${M.map((_, j) => `<th title="${esc(M[j].label)}">${j + 1}</th>`).join("")}</tr></thead><tbody>`;
+let h = `<thead><tr><th class="who">wrote ↓ · key →</th>${M.map((_, j) => `<th title="${esc(M[j].label)}">${j + 1}</th>`).join("")}</tr></thead><tbody>`;
 M.forEach((m, i) => {
   h += `<tr><th class="who">${i + 1} · ${esc(m.label)}</th>`;
   M.forEach((k, j) => {
@@ -130,24 +130,21 @@ M.forEach((m, i) => {
 });
 $("matrix").innerHTML = h + "</tbody>";
 
-let t = `<thead><tr><th>Model</th><th class="num">Named correctly</th><th>Signal strength</th><th class="num">Best wrong key</th><th class="num">Tokens per reply</th></tr></thead><tbody>`;
+let t = `<thead><tr><th>Model</th><th class="num">Caught</th><th>Signature strength</th><th class="num">Highest wrong-key score</th></tr></thead><tbody>`;
 M.forEach((m, i) => {
   const rs = byModel[i], n = rs.filter(named).length, z = median(rs.map(r => r.z[i]));
   const wz = Math.max(...rs.map(r => Math.max(...r.z.filter((_, j) => j !== i))));
   t += `<tr><td>${esc(m.label)}</td><td class="num"><span class="pill ${n === rs.length ? "ok" : "no"}">${n}/${rs.length}</span></td>` +
     `<td><span class="bar"><span style="width:${Math.min(100, z / 30 * 100).toFixed(0)}%"></span></span> <span class="mono">${z.toFixed(1)}</span></td>` +
-    `<td class="num">${wz.toFixed(1)}</td><td class="num">${Math.round(median(rs.map(r => r.tokens)))}</td></tr>`;
+    `<td class="num">${wz.toFixed(1)}</td></tr>`;
 });
 $("table").innerHTML = t + "</tbody>";
 const zs = M.map((m, i) => [m.label, median(byModel[i].map(r => r.z[i])), byModel[i].filter(named).length, byModel[i].length]).sort((x, y) => y[1] - x[1]);
 const missed = M.map((m, i) => [m.label, byModel[i].filter(r => r.matches.includes(m.name)).length, byModel[i].length]).filter(x => x[1] < x[2]);
 const offCells = N * (N - 1);
-$("a-grid").textContent = (wrong === 0
-  ? `No. In all ${offCells} off-diagonal checks, no key matched a reply from a different model.`
-  : `Yes, ${wrong} replies matched a different model's key.`) +
-  (missed.length ? ` The only gaps are misses on the diagonal: ${missed.map(x => `${x[0]}'s own key recognised ${x[1]} of its ${x[2]} replies`).join(", and ")}. A miss leaves a reply unattributed; it never points at the wrong model.` : "");
+$("a-grid").textContent = wrong === 0 ? "No, never." : `Yes, ${wrong} times.`;
 const weak = zs.filter(z => z[2] < z[3]);
-$("a-table").textContent = `Strongest: ${zs[0][0]}. Weakest: ${zs.at(-1)[0]}.` + (weak.length ? ` Only ${weak.map(z => `${z[0]} (${z[2]} of ${z[3]})`).join(" and ")} missed some replies, and even then no wrong model was named.` : "");
+$("a-table").textContent = weak.length ? `All clear, except ${weak.map(z => `${z[0]} (${z[2]} of ${z[3]} caught)`).join(" and ")}.` : "All clear for every model.";
 
 $("foot").textContent = `Generated ${L.generated} on the demo server.`;
 })();

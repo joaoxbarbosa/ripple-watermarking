@@ -10,8 +10,14 @@ Environment:
     RIPPLE_FP_DEFAULT model selected by default (see demo/engine.py).
     RIPPLE_FP_KEY     master watermark secret. Each model's key is derived from
                       it and the model id, so checking text also tells you
-                      which model wrote it. If unset, a key is created once and
-                      saved in demo/.demo_key (gitignored).
+                      which model wrote it. If unset, the committed demo key in
+                      keys/demo-master.key is used (public on purpose: this is a
+                      demo, and anyone with the key can detect *and forge*). If
+                      that file is missing too, a key is created once and saved
+                      in demo/.demo_key (gitignored).
+    RIPPLE_FP_LLAMACPP  llama-server URL for Ripple-65B (default
+                      http://127.0.0.1:8080; "off" to disable). Start it with
+                      scripts/start_llama_server.sh.
     PORT              default 8000
 
 Models load on first use and stay loaded. Detection only needs the
@@ -40,9 +46,12 @@ from .lean_check import add_lean_routes
 HERE = Path(__file__).parent
 
 
-def _load_key() -> str:
+def _load_key() -> bytes | str:
     if os.environ.get("RIPPLE_FP_KEY"):
         return os.environ["RIPPLE_FP_KEY"]
+    shared = HERE.parent / "keys" / "demo-master.key"  # committed demo key (hex)
+    if shared.exists():
+        return bytes.fromhex(shared.read_text().strip())
     path = HERE / ".demo_key"
     if not path.exists():
         path.write_text(secrets.token_hex(32))

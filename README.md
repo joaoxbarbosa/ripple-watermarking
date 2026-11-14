@@ -345,7 +345,11 @@ Face models in `RIPPLE_FP_MODELS` (default: Qwen3-0.6B,
 Qwen2.5-0.5B-Instruct, gpt2, gpt2-large). To serve Ripple from a machine with enough GPU,
 add `ricursiveAI/Ripple-65B-Preview` (or a local path) to `RIPPLE_FP_MODELS`. For more
 than one GPU, also install `accelerate`. The master key comes from `RIPPLE_FP_KEY`, or
-is created once in `demo/.demo_key` (gitignored). Each model's key is derived
+the committed demo key in `keys/demo-master.key` (public on purpose: anyone with it
+can detect *and forge* the watermark, so use your own key outside a demo), or, if
+that file is missing, is created once in `demo/.demo_key` (gitignored). With
+llama-server running (`scripts/start_llama_server.sh`), Ripple-65B through llama.cpp
+is offered first. Each model's key is derived
 from it and the model id, so text generated before per-model keys existed no
 longer checks out.
 
@@ -378,3 +382,15 @@ PYTHONPATH=. .venv/bin/python docs/run_speed.py docs/speed-pairs.json
 
 The speed chart reads [`docs/speed.json`](docs/speed.json), measured with
 interleaved runs against native MLX sampling.
+
+### Ripple-65B on a GPU pod
+
+Serving Ripple-65B through llama.cpp (pod setup, `--swa-full`, restoring after a crash,
+SSH tunnel to the demo, the environment it was built on, open issues) is written up in
+[`docs/RIPPLE_POD.md`](docs/RIPPLE_POD.md). To rebuild the Ripple-65B results on the site:
+
+```bash
+python3 docs/run_experiment_llamacpp.py docs/experiment-ripple-65b.json
+python3 docs/run_speed_llamacpp.py docs/experiment-ripple-65b.json docs/speed-ripple-65b.json
+python3 docs/make_stats.py docs/experiment-ripple-65b.json ripple-65b docs/speed-ripple-65b.json
+```

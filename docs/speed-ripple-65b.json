@@ -1,0 +1,24 @@
+{
+  "model": "Ripple-65B (llama.cpp, Q4_K_M)",
+  "machine": "NVIDIA RTX 6000 Ada",
+  "note": "Native: llama-server's own sampler, median of 8 replies (20.7 tok/s). Others: medians of the experiment's 16 replies each (16.1 and 15.1 tok/s).",
+  "rows": [
+    {
+      "name": "Native llama-server sampling",
+      "share": 1.0,
+      "reference": true,
+      "tok_s": 20.677117077230317
+    },
+    {
+      "name": "Python loop, no fingerprint",
+      "share": 0.779,
+      "before": true,
+      "tok_s": 16.110362231325773
+    },
+    {
+      "name": "Fingerprinted: now",
+      "share": 0.731,
+      "tok_s": 15.106771734004722
+    }
+  ]
+}

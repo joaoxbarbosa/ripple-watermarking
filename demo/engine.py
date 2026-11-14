@@ -9,6 +9,9 @@ Kept separate from ``server.py`` so the server only wires up routes:
 Backends:
 * MLX models (e.g. LM Studio's ~/.lmstudio/models), run with Apple MLX.
 * Hugging Face models, run with torch (CUDA, Apple GPU or CPU).
+* llama.cpp: Ripple-65B-Preview (GGUF) served by a running ``llama-server``
+  (see scripts/start_llama_server.sh). Offered automatically when the server
+  at RIPPLE_FP_LLAMACPP (default http://127.0.0.1:8080) is up.
 """
 
 from __future__ import annotations
@@ -39,6 +42,12 @@ PREFERRED_DEFAULT = "Qwen3-VL-4B-Instruct-MLX-8bit"
 HIDDEN_MLX = {"Qwen3-4B-Base-mlx-4Bit"}  # LM Studio models left out of the list
 TRACE_K = 8  # candidate tokens recorded per step for the visualizer
 
+# Ripple-65B through llama.cpp. The name is also the key label: keep it stable,
+# or text fingerprinted earlier stops checking out.
+RIPPLE_NAME = "ripple-65b-preview"
+RIPPLE_TOKENIZER = "ricursiveAI/Ripple-65B-Preview"  # same ids as the GGUF's tokenizer (checked)
+LLAMACPP_URL = os.environ.get("RIPPLE_FP_LLAMACPP", "http://127.0.0.1:8080")
+
 
 # --------------------------------------------------------------------------- discovery
 def is_mlx(path: Path) -> bool:
@@ -49,8 +58,16 @@ def is_mlx(path: Path) -> bool:
 
 
 def discover_models() -> list[dict]:
-    """LM Studio MLX models plus RIPPLE_FP_MODELS (or the HF defaults). The default goes first."""
+    """Ripple via llama-server (if it's up), LM Studio MLX models, plus RIPPLE_FP_MODELS
+    (or the HF defaults). The default goes first: Ripple when it's available."""
     models = []
+    if LLAMACPP_URL.lower() not in ("", "0", "off", "none"):
+        from ripple_fingerprint.llamacpp import LlamaServer
+        if LlamaServer(LLAMACPP_URL, timeout=3).healthy():
+            models.append({"name": RIPPLE_NAME, "label": "Ripple-65B-Preview · llama.cpp Q4_K_M (GPU)",
+                           "backend": "llamacpp", "url": LLAMACPP_URL, "tokenizer": RIPPLE_TOKENIZER})
+        else:
+            print(f"llama-server not reachable at {LLAMACPP_URL}: Ripple-65B not offered", flush=True)
     if LMSTUDIO.is_dir():
         for d in sorted(LMSTUDIO.glob("*/*")):
             if is_mlx(d) and d.name not in HIDDEN_MLX:
@@ -61,7 +78,8 @@ def discover_models() -> list[dict]:
             local = Path(n).expanduser()
             models.append({"name": n, "label": local.name if local.is_dir() else n,
                            "backend": "mlx" if is_mlx(local) else "hf"})
-    want = os.environ.get("RIPPLE_FP_DEFAULT", PREFERRED_DEFAULT)
+    has_ripple = any(m["backend"] == "llamacpp" for m in models)
+    want = os.environ.get("RIPPLE_FP_DEFAULT", RIPPLE_NAME if has_ripple else PREFERRED_DEFAULT)
     models.sort(key=lambda m: not (m["name"] == want or Path(m["name"]).name == want))
     return models
 
@@ -115,7 +133,11 @@ class Engine:
         """Hugging Face tokenizer (MLX folders ship the same files). Used for detection."""
         self.check(name)
         if name not in self.tokenizers:
-            self.tokenizers[name] = AutoTokenizer.from_pretrained(name, trust_remote_code=True)
+            info = self.info[name]
+            if info["backend"] == "llamacpp":  # plain tokenizer.json: no remote code needed
+                self.tokenizers[name] = AutoTokenizer.from_pretrained(info["tokenizer"])
+            else:
+                self.tokenizers[name] = AutoTokenizer.from_pretrained(name, trust_remote_code=True)
         return self.tokenizers[name]
 
     def loaded(self, name: str) -> bool:
@@ -135,11 +157,19 @@ class Engine:
             mx.clear_cache()
 
     def _model(self, name: str):
+        if self.info[name]["backend"] == "llamacpp":
+            # Weights live in llama-server's process: nothing to load or evict here,
+            # and it doesn't count against max_loaded.
+            from ripple_fingerprint.llamacpp import LlamaServer
+            if name not in self.models:
+                self.models[name] = LlamaServer(self.info[name]["url"])
+            return self.models[name]
         if name in self.models:
             self.models[name] = self.models.pop(name)  # mark as most recently used
         else:
-            while len(self.models) >= self.max_loaded:
-                self.unload(next(iter(self.models)))
+            local = [n for n in self.models if self.info[n]["backend"] != "llamacpp"]
+            while len(local) >= self.max_loaded:
+                self.unload(local.pop(0))
             print(f"loading {name} ...", flush=True)
             if self.info[name]["backend"] == "mlx":
                 from mlx_lm import load
@@ -200,6 +230,18 @@ class Engine:
             out = generate_ids(model, list(ids), wm, eos, max_new_tokens=max_new_tokens,
                                temperature=temperature, top_p=top_p, watermark=watermark, on_step=on_step)
             text = mtok.decode(out)
+        elif backend == "llamacpp":
+            from ripple_fingerprint.llamacpp import generate_ids
+            server = loaded
+            eos = server.eos_ids()
+            ids = tok.apply_chat_template([{"role": "user", "content": prompt}],
+                                          add_generation_prompt=True, tokenize=True, return_dict=False)
+            # Ripple's template has no enable_thinking switch: prefill an empty think block so
+            # it answers directly (like enable_thinking=False for the other models).
+            ids = list(ids) + server.tokenize("<think>\n\n</think>\n\n", parse_special=True)
+            out = generate_ids(server, ids, wm, eos, max_new_tokens=max_new_tokens,
+                               temperature=temperature, top_p=top_p, watermark=watermark, on_step=on_step)
+            text = tok.decode(out, skip_special_tokens=True)
         else:
             model = loaded
             eos = set(np.atleast_1d(model.generation_config.eos_token_id or tok.eos_token_id).tolist())

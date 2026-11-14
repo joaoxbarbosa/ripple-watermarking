@@ -300,3 +300,15 @@ PYTHONPATH=. .venv/bin/python docs/run_speed.py docs/speed-pairs.json
 
 The speed chart reads [`docs/speed.json`](docs/speed.json), measured with
 interleaved runs against native MLX sampling.
+
+### Ripple-65B on a GPU pod
+
+Serving Ripple-65B through llama.cpp (pod setup, `--swa-full`, restoring after a crash,
+SSH tunnel to the demo, the environment it was built on, open issues) is written up in
+[`docs/RIPPLE_POD.md`](docs/RIPPLE_POD.md). To rebuild the Ripple-65B results on the site:
+
+```bash
+python3 docs/run_experiment_llamacpp.py docs/experiment-ripple-65b.json
+python3 docs/run_speed_llamacpp.py docs/experiment-ripple-65b.json docs/speed-ripple-65b.json
+python3 docs/make_stats.py docs/experiment-ripple-65b.json ripple-65b docs/speed-ripple-65b.json
+```

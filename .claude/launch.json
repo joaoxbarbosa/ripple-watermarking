@@ -26,6 +26,19 @@
       ],
       "port": 8001,
       "autoPort": false
+    },
+    {
+      "name": "results-site",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8010",
+        "--directory",
+        "site"
+      ],
+      "port": 8010,
+      "autoPort": false
     }
   ]
 }

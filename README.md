@@ -289,6 +289,7 @@ To rebuild the charts (MLX on Apple Silicon; about 4 minutes):
 
 ```bash
 PYTHONPATH=. .venv/bin/python docs/run_experiment.py experiment.json
+PYTHONPATH=. .venv/bin/python docs/run_speed.py docs/speed-pairs.json
 .venv/bin/python docs/make_charts.py experiment.json
 ```
 

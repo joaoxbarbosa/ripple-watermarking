@@ -188,7 +188,7 @@ S.tokens.forEach((t, i) => {
   const s = S.scores[i]; const sp = document.createElement("span");
   sp.textContent = t;
   if (s === null) sp.className = "skip";
-  else { const a = Math.max(0, Math.min(1, (s - 1) / 4)); sp.style.background = `rgba(var(--heat-rgb),${(a * .85).toFixed(3)})`; sp.title = `score ${s.toFixed(2)} (ordinary text averages 1.00)`; }
+  else { const a = Math.max(0, Math.min(1, (s - 1) / 4)); sp.style.background = `rgba(var(--heat-rgb),${(a * .85).toFixed(3)})`; if (a > .5) sp.style.color = "var(--bg)"; sp.title = `score ${s.toFixed(2)} (ordinary text averages 1.00)`; }
   tokBox.appendChild(sp);
 });
 

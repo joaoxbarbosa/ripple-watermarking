@@ -4,3 +4,15 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 demo/.demo_key
+
+# secrets: never commit watermark keys (the public demo key is the one exception)
+*.key
+!keys/demo-master.key
+master.key
+.env
+
+# jupyter, caches, model weights
+.ipynb_checkpoints/
+.cache/
+*.gguf
+*.safetensors

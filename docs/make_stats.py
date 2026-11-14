@@ -1,10 +1,14 @@
 """Compute the numbers behind the results site and the model card.
 
     .venv/bin/python docs/make_stats.py experiment.json
+    python3 docs/make_stats.py docs/experiment-ripple-65b.json ripple-65b docs/speed-ripple-65b.json
 
-Reads an experiment file from docs/run_experiment.py and writes
-site/results.js (``window.RESULTS = {...}``) so site/index.html works opened
-straight from disk.
+Reads an experiment file from docs/run_experiment.py (MLX) or
+docs/run_experiment_llamacpp.py and writes site/results.js
+(``window.RESULTS = {...}``), or, given a slug, site/results-<slug>.js, which
+adds the run to ``window.RESULTS_MORE`` for the model switcher on
+site/index.html. Either way the page works opened straight from disk.
+llama.cpp runs are tokenized by the running llama-server.
 """
 
 from __future__ import annotations
@@ -25,16 +29,55 @@ from ripple_fingerprint import ModelRegistry, Watermarker  # noqa: E402
 FPR = 1e-5
 
 
-def main(path: str):
+class _ServerTokenizer:
+    """The two tokenizer calls this script makes, answered by llama-server."""
+
+    def __init__(self):
+        from ripple_fingerprint.llamacpp import LlamaServer
+        import os
+        self.srv = LlamaServer(os.environ.get("RIPPLE_FP_LLAMACPP", "http://127.0.0.1:8080"))
+
+    def encode(self, text, add_special_tokens=False):
+        return self.srv.tokenize(text)
+
+    def decode(self, ids):
+        return self.srv.detokenize(ids)
+
+    def __call__(self, text, add_special_tokens=False, return_offsets_mapping=False):
+        """HF-style call, with character offsets rebuilt from the server's token pieces."""
+        toks = self.srv._post("/tokenize", {"content": text, "with_pieces": True})["tokens"]
+        ids = [t["id"] for t in toks]
+        if not return_offsets_mapping:
+            return {"input_ids": ids}
+        raw = text.encode("utf-8")
+        char_at = [0] * (len(raw) + 1)  # byte position -> character position
+        b = 0
+        for ci, ch in enumerate(text):
+            for _ in range(len(ch.encode("utf-8"))):
+                char_at[b] = ci; b += 1
+        char_at[len(raw)] = len(text)
+        offsets, pos = [], 0
+        for t in toks:
+            pc = t["piece"]
+            n = len(pc.encode("utf-8")) if isinstance(pc, str) else len(pc)
+            offsets.append((char_at[pos], char_at[min(pos + n, len(raw))])); pos += n
+        if pos != len(raw):
+            raise ValueError("token pieces do not cover the text")  # registry falls back to no offsets
+        return {"input_ids": ids, "offset_mapping": offsets}
+
+
+def main(path: str, slug: str | None = None, speed_path: str | None = None):
     exp = json.loads(Path(path).read_text())
     wm = Watermarker(exp["key"].encode())
-    tok = AutoTokenizer.from_pretrained(exp["model"])
+    llama = exp.get("backend") == "llamacpp"
+    tok = _ServerTokenizer() if llama else AutoTokenizer.from_pretrained(exp["model"])
     runs = exp["runs"]
     wmk = [r for r in runs if r["watermark"]]
     plain = [r for r in runs if not r["watermark"]]
     rng = np.random.default_rng(0)
     out: dict = {
         "model": Path(exp["model"]).name,
+        "backend": "llama.cpp" if llama else "MLX",
         "fpr": FPR,
         "settings": {"temperature": 1.0, "top_p": 1.0, "max_new_tokens": 300, "context_width": 3},
         "n_prompts": len(wmk),
@@ -167,7 +210,7 @@ def main(path: str):
     out["spans"] = span_tests
 
     # ---------------------------------------------------------- speed + samples
-    out["speed"] = json.loads((ROOT / "docs/speed.json").read_text())
+    out["speed"] = json.loads(Path(speed_path or ROOT / "docs/speed.json").read_text())
     pick = int(np.argmin([abs(len(r["ids"]) - 200) for r in wmk]))
     sample = wmk[pick]
     sc = wm.token_scores(sample["ids"])
@@ -178,9 +221,15 @@ def main(path: str):
         "log10_p": float(np.log10(max(wm.detect(sample["ids"]).p_value, 1e-300))),
     }
 
-    dest = ROOT / "site/results.js"
+    blob = json.dumps(out, separators=(",", ":"))
+    if slug:
+        dest = ROOT / f"site/results-{slug}.js"
+        js = f"(window.RESULTS_MORE = window.RESULTS_MORE || {{}})[{json.dumps(slug)}] = {blob};\n"
+    else:
+        dest = ROOT / "site/results.js"
+        js = "window.RESULTS = " + blob + ";\n"
     dest.parent.mkdir(exist_ok=True)
-    dest.write_text("window.RESULTS = " + json.dumps(out, separators=(",", ":")) + ";\n")
+    dest.write_text(js)
     print("wrote", dest)
     print(json.dumps({k: v for k, v in out.items() if k in ("watermarked", "plain", "attribution", "calibration")},
                      default=str)[:3000])
@@ -191,4 +240,4 @@ def main(path: str):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(*sys.argv[1:4])

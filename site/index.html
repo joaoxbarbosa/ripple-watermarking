@@ -46,7 +46,8 @@
       <div class="label"><b>Step 3</b>the measurements</div>
       <h1>Does it work?</h1>
       <p class="answer" id="a0" style="font-size:20px"></p>
-      <p class="sub">We asked a small chat model 16 everyday questions twice: once with the signature on, once with it off. Then we checked every reply. Each section below asks one question and answers it, misses included.</p>
+      <div class="seg" id="model-pick" role="group" aria-label="Model" style="margin:4px 0 14px" hidden></div>
+      <p class="sub"><span id="sub-who">We asked a small chat model</span> 16 everyday questions twice: once with the signature on, once with it off. Then we checked every reply. Each section below asks one question and answers it, misses included.</p>
       <div class="chips" id="meta"></div>
       <div class="btnrow"><a class="btn primary" href="#s-summary">See the answers ↓</a><a class="btn ghost" href="/">Try it live ↗</a></div>
     </div>
@@ -184,9 +185,17 @@
 })();
 </script>
 <script src="results.js"></script>
+<script src="results-ripple-65b.js" onerror="void 0"></script>
 <script>
 (() => {
-const R = window.RESULTS;
+// Every run on the page: the default (results.js) plus any results-<slug>.js loaded above.
+// Ripple-65B (the model this is built for) comes first and is the default when its file is present.
+const RUNS = Object.assign({}, window.RESULTS_MORE || {}, {qwen: window.RESULTS});
+const FIRST = Object.keys(RUNS)[0];
+let pick = null; try { pick = new URLSearchParams(location.search).get("model"); } catch (e) {}
+const slug = RUNS[pick] ? pick : FIRST;
+const R = RUNS[slug];
+const BACKEND = R.backend || "MLX";
 const $ = (id) => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";
 const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
@@ -196,7 +205,17 @@ const pfmt = (l10) => l10 <= -299 ? "< 10⁻³⁰⁰" : (() => { const e = Math.
 const W = R.watermarked, P = R.plain;
 
 // ---------- meta
-$("meta").innerHTML = [R.model, `${R.n_prompts} prompts × 2`, `T=${R.settings.temperature} · top-p ${R.settings.top_p}`, `≤ ${R.settings.max_new_tokens} tokens`, `threshold p < 10⁻⁵`].map(t => `<span class="chip">${t}</span>`).join("");
+if (Object.keys(RUNS).length > 1) {
+  const box = $("model-pick"); box.hidden = false;
+  for (const [k, run] of Object.entries(RUNS)) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = run.model.replace(/-MLX-8bit$/, "");
+    b.setAttribute("aria-pressed", k === slug);
+    b.onclick = () => { const u = new URL(location.href); if (k === FIRST) u.searchParams.delete("model"); else u.searchParams.set("model", k); location.href = u.toString(); };
+    box.appendChild(b);
+  }
+}
+if (R.backend && R.backend !== "MLX") $("sub-who").textContent = `We asked ${R.model} (run with ${BACKEND})`;
+$("meta").innerHTML = [R.model, BACKEND, `${R.n_prompts} prompts × 2`, `T=${R.settings.temperature} · top-p ${R.settings.top_p}`, `≤ ${R.settings.max_new_tokens} tokens`, `threshold p < 10⁻⁵`].map(t => `<span class="chip">${t}</span>`).join("");
 
 // ---------- specimen
 const S = R.sample;
@@ -220,7 +239,7 @@ $("stats").innerHTML = [
   stat(`${W.log10_p.filter(v => v < -2).length}/${W.n}`, "fingerprinted replies detected at p &lt; 0.01"),
   stat(`${P.flagged}/${P.n}`, "plain replies flagged at either threshold"),
   stat(pfmt(median(W.log10_p)), "median p-value of a fingerprinted reply"),
-  stat(`${Math.round(spd.share * 100)}%`, "of native MLX generation speed"),
+  stat(`${Math.round(spd.share * 100)}%`, `of native ${BACKEND} generation speed`),
   stat(R.calibration.tests.toLocaleString(), `wrong-key tests, ${R.calibration.flagged} below 10⁻⁵`),
 ].join("");
 
@@ -368,7 +387,7 @@ drawRob("replace");
 // ---------- speed
 (() => {
   const SP = R.speed; const svg = $("ch-speed"); svg.innerHTML = "";
-  $("speed-desc").textContent = `Tokens per second as a share of MLX's own sampling loop, on ${SP.model} on an ${SP.machine}. The keyed draws for the next step are computed while the GPU is still producing the current one.`;
+  $("speed-desc").textContent = `Tokens per second as a share of ${BACKEND}'s own sampling, on ${SP.model} on an ${SP.machine}. The keyed draws for the next step are computed while the GPU is still producing the current one.`;
   const rows = SP.rows; const l = 290, r = 70, w = 900, rowH = 44, t = 6;
   const X = v => l + v * (w - l - r);
   [0, .25, .5, .75, 1].forEach(v => { el("line", {x1: X(v), x2: X(v), y1: t, y2: t + rows.length * rowH, stroke: "var(--rule)"}, svg); const tx = el("text", {x: X(v), y: t + rows.length * rowH + 18, "text-anchor": "middle"}, svg); tx.textContent = (v * 100) + "%"; });
@@ -396,7 +415,8 @@ drawRob("replace");
 (() => {
   const set = (id, t) => { const e = $(id); if (e) e.textContent = t; };
   const loose = W.log10_p.filter(v => v < -2).length;
-  set("a0", `Mostly yes. It caught ${W.flagged} of ${W.n} signed replies and never once flagged an unsigned one.`);
+  const rate = W.flagged / W.n;
+  set("a0", `${rate >= 0.9 ? "Yes" : rate >= 0.6 ? "Mostly yes" : "Partly"}. It caught ${W.flagged} of ${W.n} signed replies and ${P.flagged ? `flagged ${P.flagged} unsigned one${P.flagged > 1 ? "s" : ""}` : "never once flagged an unsigned one"}.`);
   set("a1", "Each word is shaded by how much it points to the signature. No single word proves anything, but together they add up.");
   set("a2", `Very strict by default: it only accuses text when the odds of a fluke are below 1 in 100,000. Loosen that to 1 in 100 and it catches ${loose} of ${W.n}.`);
   set("a3", "Yes. Unsigned text stays inside the grey band no matter how long it gets. Signed text keeps climbing.");
@@ -406,7 +426,8 @@ drawRob("replace");
   set("a6", `Light editing, yes. With 1 in 5 words replaced it still caught ${Math.round(rb.watermarked[i20])}% of replies. Rewriting half the words erases it.`);
   set("a7", R.calibration.flagged === 0 ? `No. We checked unsigned text ${R.calibration.tests.toLocaleString()} times, and it never once said "signed".` : `Rarely: ${R.calibration.flagged} false alarms in ${R.calibration.tests.toLocaleString()} checks of unsigned text.`);
   set("a8", `Yes. With five models registered it named the right one ${R.attribution.correct} times and a wrong one ${R.attribution.wrong} times.`);
-  set("a9", `Barely. It runs at ${Math.round(spd.share * 100)}% of normal speed.`);
+  set("a9", spd.share >= 0.85 ? `Barely. It runs at ${Math.round(spd.share * 100)}% of normal speed.`
+    : `Yes, noticeably: it runs at ${Math.round(spd.share * 100)}% of ${BACKEND}'s native speed, because every token makes a round trip to Python.`);
 })();
 
 $("foot").textContent = `Generated ${R.generated} from ${R.n_prompts * 2} replies of ${R.model}.`;

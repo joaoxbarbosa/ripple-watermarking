@@ -19,6 +19,7 @@
 .big b { font: 500 40px/1 var(--mono); letter-spacing: -0.04em; }
 .big strong { font-size: 15px; }
 .big p { font-size: 14px; color: var(--muted); }
+.big > .run { grid-column: 1 / -1; padding: 12px 28px; justify-items: start; text-align: left; background: var(--field); }
 @media (max-width: 760px) { .big { grid-template-columns: 1fr; } }
 .cols { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); background: var(--bg); }
 .cols > div { padding: 28px; display: grid; gap: 12px; align-content: start; }
@@ -92,7 +93,7 @@ pre { margin: 0; font: 13px/1.6 var(--mono); background: var(--field); border: 1
     <ul class="list">
       <li><strong>Longer is better.</strong> A few sentences may not be enough. A few paragraphs usually are.</li>
       <li><strong>Guard the key.</strong> Whoever holds it can check text, and also fake or remove the signature. Keep it on a server.</li>
-      <li><strong>Not yet tested on Ripple-65B itself.</strong> The numbers here come from a 4B model on a laptop.</li>
+      <li id="kim-ripple"><strong>Not yet tested on Ripple-65B itself.</strong> The numbers here come from a 4B model on a laptop.</li>
     </ul>
   </div>
 
@@ -110,7 +111,7 @@ pre { margin: 0; font: 13px/1.6 var(--mono); background: var(--field); border: 1
       </ul>
       <h3>Facts</h3>
       <dl class="facts">
-        <dt>Package</dt><dd><code>ripple-fingerprint</code> 0.1.0 · NumPy core, Hugging Face and MLX back ends</dd>
+        <dt>Package</dt><dd><code>ripple-fingerprint</code> 0.1.0 · NumPy core, Hugging Face, MLX and llama.cpp back ends</dd>
         <dt>Built for</dt><dd><code>ricursiveAI/Ripple-65B-Preview</code>; works with any model that exposes next-token probabilities</dd>
         <dt>Defaults</dt><dd><code>context_width=3</code> · <code>entropy_threshold=8</code> bits · <code>fpr=1e-5</code> · key ≥ 16 bytes</dd>
         <dt>Test setup</dt><dd id="t-setup"></dd>
@@ -157,41 +158,58 @@ reg.attribute(text).best    # "ripple-65b", or None</pre>
 })();
 </script>
 <script src="results.js"></script>
+<script src="results-ripple-65b.js" onerror="void 0"></script>
 <script>
 (() => {
-const R = window.RESULTS; if (!R) return;
+if (!window.RESULTS) return;
 const $ = id => document.getElementById(id);
-const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-const W = R.watermarked, P = R.plain, S = R.settings, C = R.calibration, A = R.attribution;
-const spd = R.speed.rows.find(r => r.name === "Fingerprinted: now");
-const loose = W.log10_p.filter(v => v < -2).length;
-const wrongTotal = P.flagged + C.flagged + A.wrong + A.plain_named;
-const testsTotal = P.n + C.tests + A.n * (A.labels.length - 1) + A.n;
+// Ripple-65B (the model this is built for) first when its run is present, then the 4B laptop run.
+const RUNS = [...Object.values(window.RESULTS_MORE || {}), window.RESULTS];
+const short = R => R.model.replace(/-MLX-8bit$/, "");
+const where = R => (R.backend || "MLX") === "MLX" ? "on a laptop (MLX)" : `on a GPU server (${R.backend})`;
+const spdOf = R => R.speed.rows.find(r => r.name === "Fingerprinted: now");
+const loose = R => R.watermarked.log10_p.filter(v => v < -2).length;
+const wrongOf = R => R.plain.flagged + R.calibration.flagged + R.attribution.wrong + R.attribution.plain_named;
+const testsOf = R => R.plain.n + R.calibration.tests + R.attribution.n * (R.attribution.labels.length - 1) + R.attribution.n;
+const wrongTotal = RUNS.reduce((a, R) => a + wrongOf(R), 0), testsTotal = RUNS.reduce((a, R) => a + testsOf(R), 0);
 
 $("qa-fp").textContent = wrongTotal === 0 ? "No, not once in testing" : `${wrongTotal} times in ${testsTotal.toLocaleString()} tests`;
-$("qa-fp-p").textContent = `Across ${testsTotal.toLocaleString()} checks of text a key didn't write, it raised ${wrongTotal === 0 ? "no" : wrongTotal} false alarm${wrongTotal === 1 ? "" : "s"}. It only names a model when the evidence is overwhelming; the default false-alarm rate is one in 100,000.`;
+$("qa-fp-p").textContent = `Across ${testsTotal.toLocaleString()} checks of text a key didn't write${RUNS.length > 1 ? `, on ${RUNS.length} models` : ""}, it raised ${wrongTotal === 0 ? "no" : wrongTotal} false alarm${wrongTotal === 1 ? "" : "s"}. It only names a model when the evidence is overwhelming; the default false-alarm rate is one in 100,000.`;
 
-$("glance-setup").textContent = `One test run: ${R.n_prompts} everyday chat requests (stories, explanations, advice, poems) answered by ${R.model.replace(/-MLX-8bit$/, "")} on a laptop, each reply about ${S.max_new_tokens} tokens (roughly ${Math.round(S.max_new_tokens * 0.75)} words).`;
-$("glance").innerHTML = [
-  [`${W.flagged} of ${W.n}`, "signed replies caught", `At the strict default setting. With a looser setting (one false alarm in 100) it caught ${loose} of ${W.n}.`],
-  [`${wrongTotal}`, "false alarms", `In ${testsTotal.toLocaleString()} checks of unsigned text or the wrong model's key.`],
-  [`${Math.round(spd.share * 100)}%`, "of normal speed", "Signing adds almost no time to generation."],
-].map(([b, s, p]) => `<div><b>${b}</b><strong>${s}</strong><p>${p}</p></div>`).join("");
+const R0 = RUNS[0];
+$("glance-setup").textContent = RUNS.length > 1
+  ? `${RUNS.length} test runs, same ${R0.n_prompts} everyday chat requests (stories, explanations, advice, poems) and the same settings: ${RUNS.map(R => `${short(R)} ${where(R)}`).join(", and ")}. Replies up to ${R0.settings.max_new_tokens} tokens (roughly ${Math.round(R0.settings.max_new_tokens * 0.75)} words).`
+  : `One test run: ${R0.n_prompts} everyday chat requests (stories, explanations, advice, poems) answered by ${short(R0)} ${where(R0)}, each reply about ${R0.settings.max_new_tokens} tokens (roughly ${Math.round(R0.settings.max_new_tokens * 0.75)} words).`;
+$("glance").innerHTML = RUNS.map(R => {
+  const W = R.watermarked, spd = spdOf(R);
+  const speedNote = spd.share >= 0.85 ? "Signing adds almost no time to generation."
+    : `Most of the gap is the per-token round trip to Python; the fingerprint itself costs ${Math.round((1 - spd.share / (R.speed.rows.find(r => r.before)?.share || 1)) * 100)}% on top.`;
+  return (RUNS.length > 1 ? `<div class="run"><span class="label"><b>${short(R)}</b>${where(R)}</span></div>` : "") + [
+    [`${W.flagged} of ${W.n}`, "signed replies caught", `At the strict default setting. With a looser setting (one false alarm in 100) it caught ${loose(R)} of ${W.n}.`],
+    [`${wrongOf(R)}`, "false alarms", `In ${testsOf(R).toLocaleString()} checks of unsigned text or the wrong model's key.`],
+    [`${Math.round(spd.share * 100)}%`, `of native ${R.backend || "MLX"} speed`, speedNote],
+  ].map(([b, s, p]) => `<div><b>${b}</b><strong>${s}</strong><p>${p}</p></div>`).join("");
+}).join("");
 
-$("t-setup").textContent = `${R.model}, ${R.n_prompts} prompts × (signed + plain), T = ${S.temperature}, top-p = ${S.top_p}, ≤ ${S.max_new_tokens} tokens, run of ${R.generated}`;
+const ripple = RUNS.find(R => /ripple/i.test(R.model));
+if (ripple) $("kim-ripple").innerHTML = `<strong>Tested on Ripple-65B itself.</strong> On ${ripple.speed.machine} through llama.cpp it caught ${ripple.watermarked.flagged} of ${ripple.watermarked.n} signed replies with no false alarms, at ${Math.round(spdOf(ripple).share * 100)}% of llama.cpp's native speed.`;
+
+$("t-setup").textContent = RUNS.map(R => `${R.model} (${R.backend || "MLX"}), ${R.n_prompts} prompts × (signed + plain), T = ${R.settings.temperature}, top-p = ${R.settings.top_p}, ≤ ${R.settings.max_new_tokens} tokens, run of ${R.generated}`).join("; ");
 const ths = [[-2, "0.01"], [-3, "10⁻³"], [-5, "10⁻⁵ (default)"], [-8, "10⁻⁸"]];
-$("eval-thr").innerHTML = `<thead><tr><th>Threshold</th><th class="num">Signed replies caught</th><th class="num">Plain replies flagged</th></tr></thead><tbody>` +
-  ths.map(([l, n]) => `<tr><td class="mono">p &lt; ${n}</td><td class="num">${W.log10_p.filter(v => v < l).length} / ${W.n}</td><td class="num">${P.log10_p.filter(v => v < l).length} / ${P.n}</td></tr>`).join("") + "</tbody>";
-const RB = R.robustness, idx = [0, 2, 4, 6, 8, 10];
-$("eval-rob").innerHTML = `<thead><tr><th>Words changed</th>${idx.map(i => `<th class="num">${Math.round(RB.fraction[i] * 100)}%</th>`).join("")}</tr></thead><tbody>` +
-  ["replace", "delete"].map(k => `<tr><td>${k === "replace" ? "Replaced" : "Deleted"}</td>${idx.map(i => `<td class="num">${Math.round(RB[k].watermarked[i])}%</td>`).join("")}</tr>`).join("") + "</tbody>";
-const found = R.spans.filter(s => s.found);
-$("eval-other").innerHTML = [
-  `<li>${C.tests.toLocaleString()} wrong-key tests: ${C.flagged} below 10⁻⁵, smallest p ${C.min_p.toExponential(1)}, ${(C.share_below_01 * 100).toFixed(1)}% below 0.01 (1% expected).</li>`,
-  `<li>With ${A.labels.length} models registered: ${A.correct}/${A.n} signed replies named as the right model only; a wrong model named ${A.wrong} times.</li>`,
-  `<li>Mixed documents: the signed passage was located in ${found.length} of ${R.spans.length}; no span went to a wrong model.</li>`,
-].join("");
-$("foot").textContent = `Numbers from the run of ${R.generated} · ${R.model}`;
+$("eval-thr").innerHTML = `<thead><tr><th>Threshold</th>${RUNS.map(R => `<th class="num">${short(R)}: signed caught</th><th class="num">${short(R)}: plain flagged</th>`).join("")}</tr></thead><tbody>` +
+  ths.map(([l, n]) => `<tr><td class="mono">p &lt; ${n}</td>${RUNS.map(R => `<td class="num">${R.watermarked.log10_p.filter(v => v < l).length} / ${R.watermarked.n}</td><td class="num">${R.plain.log10_p.filter(v => v < l).length} / ${R.plain.n}</td>`).join("")}</tr>`).join("") + "</tbody>";
+const idx = [0, 2, 4, 6, 8, 10], F = R0.robustness.fraction;
+$("eval-rob").innerHTML = `<thead><tr><th>Words changed</th>${idx.map(i => `<th class="num">${Math.round(F[i] * 100)}%</th>`).join("")}</tr></thead><tbody>` +
+  RUNS.flatMap(R => ["replace", "delete"].map(k => `<tr><td>${RUNS.length > 1 ? short(R) + " · " : ""}${k === "replace" ? "Replaced" : "Deleted"}</td>${idx.map(i => `<td class="num">${Math.round(R.robustness[k].watermarked[i])}%</td>`).join("")}</tr>`)).join("") + "</tbody>";
+$("eval-other").innerHTML = RUNS.map(R => {
+  const C = R.calibration, A = R.attribution, found = R.spans.filter(s => s.found), pre = RUNS.length > 1 ? `<strong>${short(R)}:</strong> ` : "";
+  return [
+    `<li>${pre}${C.tests.toLocaleString()} wrong-key tests: ${C.flagged} below 10⁻⁵, smallest p ${C.min_p.toExponential(1)}, ${(C.share_below_01 * 100).toFixed(1)}% below 0.01 (1% expected).</li>`,
+    `<li>${pre}With ${A.labels.length} models registered: ${A.correct}/${A.n} signed replies named as the right model only; a wrong model named ${A.wrong} times.</li>`,
+    `<li>${pre}Mixed documents: the signed passage was located in ${found.length} of ${R.spans.length}; no span went to a wrong model.</li>`,
+  ].join("");
+}).join("");
+$("foot").textContent = `Numbers from ${RUNS.map(R => `${R.model} (run of ${R.generated})`).join(" and ")}`;
 })();
 </script>
 <script>

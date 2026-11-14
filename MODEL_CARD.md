@@ -16,9 +16,10 @@ the latest `site/results.js`, and it links to the full results page
 - **How do you check?** Run any text through the checker, which holds the
   secret key. It says whether one of your models wrote it, and which one.
 - **Does it blame the wrong model?** Not once in testing: 0 false alarms in
-  2,016 checks of unsigned text or the wrong model's key.
-- **How often does it catch signed text?** 12 of 16 typical ~300-token chat
-  replies at the strict default setting, 15 of 16 at a looser one.
+  4,032 checks of unsigned text or the wrong model's key, across two models.
+- **How often does it catch signed text?** On Ripple-65B, 13 of 16 typical
+  chat replies at the strict default setting, 16 of 16 at a looser one. On
+  Qwen3-VL-4B, 12 of 16 and 15 of 16.
 - **What breaks it?** A full rewrite or translation. Very predictable text,
   like code or short lists, carries only a weak signature.
 - **What it can't do:** spot other companies' models, or prove that a person
@@ -164,6 +165,38 @@ Tokens per second relative to MLX's own sampling loop, Qwen3-VL-4B-Instruct
 | Fingerprinted + visualizer trace | 94% |
 | Fingerprinted, top-p 0.95 | 92% |
 
+### Ripple-65B
+
+The same 16 prompts, key and settings as above, on Ripple-65B-Preview
+(Q4_K_M GGUF) through llama.cpp on an NVIDIA RTX 6000 Ada. Ripple's template
+has no thinking switch, so an empty `<think></think>` block was prefilled and
+every reply is the visible answer. Scripts: `docs/run_experiment_llamacpp.py`,
+`docs/run_speed_llamacpp.py`, then
+`docs/make_stats.py docs/experiment-ripple-65b.json ripple-65b docs/speed-ripple-65b.json`
+(writes `site/results-ripple-65b.js`, generated 2026-11-14).
+
+| Threshold | Fingerprinted detected | Plain flagged |
+|---|---|---|
+| p < 0.01 | 16 / 16 | 0 / 16 |
+| p < 1e-5 (default) | 13 / 16 | 0 / 16 |
+
+- The three misses were short or predictable replies (a one-sentence plot
+  summary, a two-sentence weather-vs-climate answer, a water-cycle summary).
+  Ripple often answers tersely: the median plain reply was 131 tokens.
+- Detected replies crossed p < 1e-5 after a median of 50 tokens.
+- After edits (p < 1e-5): 77% detected with 10% of words replaced, 52% with
+  20%, 15% with 35%; 71% with 10% deleted, 58% with 20%.
+- 1,920 wrong-key tests: none below 1e-5, smallest p 4.0e-4.
+- With 5 models registered: 13 / 16 named as the right model only, a wrong
+  model never named, no plain reply attributed.
+- Mixed documents: the fingerprinted span was found in 6 of 8, overlapping
+  the true passage by 83–100%.
+
+Speed (`docs/speed-ripple-65b.json`): llama-server's own sampler runs at
+20.7 tok/s. The Python per-token loop runs at 16.1 tok/s (78%) without the
+fingerprint and 15.1 tok/s (73%) with it, so the fingerprint itself costs
+about 6%; the rest is the round trip to Python for every token.
+
 ### Earlier results (GPT-2)
 
 200-token GPT-2 generations at T = 0.8, top-p = 0.95: 100% detected clean
@@ -174,8 +207,7 @@ chat model, which is why it is detected more easily than Qwen3-VL-4B above.
 
 ### Not yet measured
 
-- Ripple-65B itself. Run `RIPPLE_FP_TEST_MODEL=/path/to/ripple pytest tests/test_hf.py`
-  on a machine that can load it.
+- Ripple-65B with thinking on (detection on the visible answer only).
 - Paraphrasing and translation attacks, beyond random word edits.
 - Larger prompt sets and other domains such as code.
 

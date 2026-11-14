@@ -120,9 +120,9 @@ class GenerateReq(BaseModel):
     model: str = MODELS[0]
     prompt: str = Field(min_length=1, max_length=4000)
     watermark: bool = True
-    temperature: float = Field(0.9, gt=0, le=2)
-    top_p: float = Field(0.95, gt=0, le=1)
-    max_new_tokens: int = Field(200, ge=1, le=1024)
+    temperature: float = Field(1.0, gt=0, le=2)
+    top_p: float = Field(1.0, gt=0, le=1)  # top-p < 1 cuts the randomness the fingerprint lives in
+    max_new_tokens: int = Field(300, ge=1, le=1024)
 
 
 class DetectReq(BaseModel):

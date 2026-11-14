@@ -34,7 +34,7 @@ from ripple_fingerprint import Watermarker, keyed_uniforms
 from ripple_fingerprint.hf import watermark_generate
 
 LMSTUDIO = Path.home() / ".lmstudio" / "models"
-HF_DEFAULTS = "Qwen/Qwen3-4B,Qwen/Qwen3-0.6B,Qwen/Qwen2.5-0.5B-Instruct,gpt2"
+HF_DEFAULTS = "Qwen/Qwen3-4B,Qwen/Qwen3-0.6B,Qwen/Qwen2.5-0.5B-Instruct,gpt2,openai-community/gpt2-large"
 PREFERRED_DEFAULT = "Qwen3-VL-4B-Instruct-MLX-8bit"
 TRACE_K = 8  # candidate tokens recorded per step for the visualizer
 

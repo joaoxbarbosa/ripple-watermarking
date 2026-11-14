@@ -122,9 +122,15 @@ On the page you can:
   model is tested and ranked, with a token-by-token heatmap of where the evidence is.
 - Use **+ Append** with different models to build a mixed document, and see
   which part came from which model.
+- **Run every model** on one prompt (section 04). Each answer is checked against
+  every key, which gives a who-wrote × which-key matrix. The diagonal lights up
+  and nothing else does. Models are swapped in and out of memory as needed
+  (`RIPPLE_FP_MAX_LOADED`, default 2).
 
-By default it runs GPT-2 on CPU. To serve Ripple from a machine with enough GPU,
-set `RIPPLE_FP_MODEL=ricursiveAI/Ripple-65B-Preview` (or a local path). For more
+It offers every MLX model in LM Studio's `~/.lmstudio/models`, plus the Hugging
+Face models in `RIPPLE_FP_MODELS` (default: Qwen3-4B, Qwen3-0.6B,
+Qwen2.5-0.5B-Instruct, gpt2, gpt2-large). To serve Ripple from a machine with enough GPU,
+add `ricursiveAI/Ripple-65B-Preview` (or a local path) to `RIPPLE_FP_MODELS`. For more
 than one GPU, also install `accelerate`. The master key comes from `RIPPLE_FP_KEY`, or
 is created once in `demo/.demo_key` (gitignored). Each model's key is derived
 from it and the model id, so text generated before per-model keys existed no

@@ -57,6 +57,25 @@ detect_text(text, tokenizer, wm).is_watermarked
 Or pass `WatermarkLogitsProcessor(wm, temperature, top_k, top_p)` in your
 own `logits_processor` list with `do_sample=False`. See `examples/demo_hf.py`.
 
+## Demo website
+
+```bash
+.venv/bin/pip install -e '.[demo]'
+.venv/bin/python -m demo.server          # then open http://localhost:8000
+```
+
+On the page you can:
+
+- Generate text with the fingerprint on or off.
+- Edit the text by hand, or use the tamper buttons to replace or delete random words.
+- See whether the fingerprint survives, with a token-by-token heatmap of where
+  the evidence is.
+
+By default it runs GPT-2 on CPU. To serve Ripple from a machine with enough GPU,
+set `RIPPLE_FP_MODEL=ricursiveAI/Ripple-65B-Preview` (or a local path). For more
+than one GPU, also install `accelerate`. The key comes from `RIPPLE_FP_KEY`, or
+is created once in `demo/.demo_key` (gitignored).
+
 ## Measured results
 
 **GPT-2, 200-token generations, T=0.8, top-p=0.95**, with random words

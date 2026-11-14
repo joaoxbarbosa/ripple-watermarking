@@ -148,23 +148,32 @@ class Watermarker:
         return tok
 
     # ------------------------------------------------------------- detection
-    def detect(self, token_ids: Sequence[int]) -> DetectionResult:
-        """Test whether ``token_ids`` carry this key's watermark."""
+    def token_scores(self, token_ids: Sequence[int]) -> list[float | None]:
+        """Per-token score ``-log(1 - u)``. ``None`` marks tokens the test skips.
+
+        Under the null hypothesis each score is Exp(1), with mean 1. Watermarked
+        tokens average noticeably higher.
+        """
         ids = [int(t) for t in token_ids]
         h = self.context_width
         seen: set = set()
-        total, n = 0.0, 0
+        out: list[float | None] = [None] * min(h, len(ids))
         for i in range(h, len(ids)):
             ctx = tuple(ids[i - h : i])
-            if ctx in seen:
+            tok = ids[i]
+            if ctx in seen or tok < 0:
+                out.append(None)
                 continue
             seen.add(ctx)
-            tok = ids[i]
-            if tok < 0:
-                continue
             u = keyed_uniforms(self.key, ctx, tok + 1)[tok]
-            total += -np.log1p(-u)
-            n += 1
+            out.append(float(-np.log1p(-u)))
+        return out
+
+    def detect(self, token_ids: Sequence[int]) -> DetectionResult:
+        """Test whether ``token_ids`` carry this key's watermark."""
+        ids = list(token_ids)
+        scores = [s for s in self.token_scores(ids) if s is not None]
+        total, n = float(sum(scores)), len(scores)
         p_value = float(gammaincc(n, total)) if n > 0 else 1.0
         return DetectionResult(
             p_value=p_value,

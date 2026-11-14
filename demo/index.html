@@ -190,6 +190,36 @@
   @keyframes fresh { from { color: var(--muted); } }
   @media (prefers-reduced-motion: reduce) { #heat span.fresh { animation: none; } }
 
+  /* ---------- every model lineup ---------- */
+  .lineup-panel { border: 1px solid var(--line); border-top: 0; padding: 28px; background: var(--bg); }
+  @media (max-width: 860px) { .lineup-panel { padding: 20px; } }
+  .lu-sub { color: var(--muted); font-size: 13px; margin: -6px 0 18px; max-width: 720px; }
+  .lu-scroll { overflow-x: auto; margin-top: 22px; border: 1px solid var(--line); }
+  .lu-scroll:has(table:empty) { display: none; }
+  table.lu { border-collapse: collapse; width: 100%; font: 12px var(--mono); }
+  .lu th, .lu td { border-top: 1px solid var(--hair); padding: 8px 10px; text-align: center; white-space: nowrap; }
+  .lu thead th { border-top: 0; font-weight: 600; font-size: 11px; color: var(--muted); vertical-align: bottom; }
+  .lu thead th.k { min-width: 54px; }
+  .lu thead th.k i { display: block; width: 10px; height: 10px; margin: 0 auto 4px; }
+  .lu th.who { text-align: left; font-weight: 500; color: var(--ink); max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+  .lu th.who i { display: inline-block; width: 10px; height: 10px; margin-right: 8px; vertical-align: -1px; }
+  .lu th.who small { color: var(--muted); margin-right: 6px; }
+  .lu tbody tr { cursor: pointer; }
+  .lu tbody tr:hover th, .lu tbody tr:hover td:not(.cell) { background: var(--field); }
+  .lu tbody tr.sel th.who { box-shadow: inset 3px 0 0 var(--ink); background: var(--field); }
+  .lu td.cell { color: var(--muted); }
+  .lu td.cell.hit { color: var(--ink); font-weight: 600; }
+  .lu td.cell.diag { outline: 1px dashed var(--faint); outline-offset: -4px; }
+  .lu td.cell sup { font-size: 0.7em; }
+  .lu td.res { text-align: left; }
+  .lu td.res b { font-weight: 600; }
+  .lu td.res.bad b { text-decoration: underline wavy; }
+  .lu td.dim { color: var(--muted); }
+  .lu-out { margin-top: 18px; border: 1px solid var(--line); }
+  .lu-out .rank-h { align-items: center; }
+  .lu-out .rank-h button { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 5px 9px; }
+  .lu-text { padding: 4px 16px 16px; white-space: pre-wrap; font-size: 14px; max-height: 260px; overflow-y: auto; }
+
   .spin { width: 10px; height: 10px; border: 1.5px solid currentColor; border-right-color: transparent; display: none; animation: r .7s linear infinite; border-radius: 50%; }
   .busy .spin { display: inline-block; }
   @keyframes r { to { transform: rotate(360deg); } }
@@ -272,6 +302,21 @@
     <div id="heat"></div>
   </section>
 
+  <section class="lineup-panel">
+    <div class="label"><b>04</b>Every model, one prompt<span class="heat-for" id="luMeta"></span></div>
+    <p class="lu-sub">Each model answers the prompt from 01 with its own key, one after another. Then every answer is checked against every key.
+      The diagonal should light up and everything else should stay blank: a key only recognises its own model's text.</p>
+    <div class="row">
+      <button class="primary" id="luGo"><span class="spin"></span><span id="luLabel">Run every model</span> →</button>
+      <span class="status" id="luStatus"></span>
+    </div>
+    <div class="lu-scroll"><table class="lu" id="luTable"></table></div>
+    <div class="lu-out" id="luOut" hidden>
+      <div class="rank-h"><span id="luOutTitle"></span><button id="luUse">Check in 02 →</button></div>
+      <div class="lu-text" id="luText"></div>
+    </div>
+  </section>
+
   <footer><span id="foot"></span><span>Key stays on the server</span></footer>
 </div>
 
@@ -309,6 +354,7 @@ function syncModel() {
 }
 fetch("/api/info").then(r => r.json()).then(i => {
   i.models.forEach((m, k) => colorOf[m.name] = `var(--m${k % 6})`);
+  allModels = i.models; $("luMeta").textContent = `${i.models.length} models`;
   for (const m of i.models) {
     const o = document.createElement("option");
     o.value = m.name; o.textContent = m.label || m.name; o.title = m.name;
@@ -579,6 +625,107 @@ function render(d) {
   }
 }
 render(null);
+
+// ---- 04: every model answers the same prompt; each answer is checked against every key.
+// POST /api/lineup streams one "result" event per model (see server.py).
+let allModels = [];
+const lu = { rows: {}, sel: null };
+const label = (n) => (allModels.find(m => m.name === n)?.label || n).replace(/^LM Studio · /, "");
+function luCell(p) {   // evidence p → short text; blank-ish for ordinary text
+  if (p >= 0.01) return "·";
+  const e = Math.floor(-Math.log10(Math.max(p, 1e-300)));
+  return e < 300 ? `10<sup>-${e}</sup>` : "&lt;10<sup>-300</sup>";
+}
+function luBuild(names) {
+  const t = $("luTable");
+  const head = names.map((n, k) => `<th class="k" title="${esc(n)}"><i style="background:${colorOf[n] || "var(--ink)"}"></i>key ${k + 1}</th>`).join("");
+  t.innerHTML = `<thead><tr><th class="who" style="color:var(--muted);font-weight:600">wrote ↓ · checked with →</th>${head}<th>verdict</th><th>tokens</th><th>time</th></tr></thead><tbody></tbody>`;
+  lu.rows = {};
+  names.forEach((n, k) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<th class="who" title="${esc(n)}"><small>${k + 1}</small><i style="background:${colorOf[n] || "var(--ink)"}"></i>${esc(label(n))}</th>` +
+      names.map((c) => `<td class="cell${c === n ? " diag" : ""}"></td>`).join("") +
+      `<td class="res dim">waiting</td><td class="dim"></td><td class="dim"></td>`;
+    tr.onclick = () => luShow(n);
+    t.tBodies[0].appendChild(tr);
+    lu.rows[n] = { tr, names };
+  });
+}
+function luShow(n) {
+  const r = lu.rows[n]; if (!r?.text) return;
+  lu.sel = n;
+  Object.values(lu.rows).forEach(x => x.tr.classList.toggle("sel", x === r));
+  $("luOut").hidden = false;
+  $("luOutTitle").textContent = `${label(n)} wrote`;
+  $("luText").textContent = r.text;
+}
+$("luUse").onclick = () => {
+  const r = lu.rows[lu.sel]; if (!r || streaming) return;
+  $("text").value = r.text; original = r.text; $("reset").disabled = true; focus = null;
+  $("modelSel").value = lu.sel; syncModel();
+  $("text").scrollIntoView({ behavior: "smooth", block: "center" });
+  check();
+};
+function luResult(ev) {
+  const r = lu.rows[ev.model]; if (!r) return;
+  r.text = ev.text;
+  const cells = r.tr.querySelectorAll("td.cell");
+  r.names.forEach((c, k) => {
+    const p = ev.evidence[c] ?? 1, td = cells[k];
+    const a = Math.max(0, Math.min(1, -Math.log10(Math.max(p, 1e-300)) / 20));
+    td.innerHTML = luCell(p);
+    td.style.background = p < 0.01 ? shade(a) : "";
+    td.classList.toggle("hit", ev.matches.includes(c));
+    td.title = `${label(c)}'s key on ${label(ev.model)}'s text: chance of a fluke ${p.toExponential(1)}`;
+  });
+  const [res, tok, time] = r.tr.querySelectorAll("td:not(.cell)");
+  const wrong = ev.matches.filter(m => m !== ev.model);
+  res.className = "res" + (wrong.length ? " bad" : "");
+  res.innerHTML = wrong.length ? `<b>wrong: ${esc(label(wrong[0]))}</b>`
+    : ev.best === ev.model ? "<b>named</b>"
+    : ev.watermark ? `missed <span class="dim">(z ${ev.z.toFixed(1)})</span>` : "no fingerprint";
+  tok.textContent = ev.num_scored; tok.className = "";
+  time.textContent = `${ev.seconds}s` + (ev.load_seconds > 1 ? ` +${Math.round(ev.load_seconds)}s` : "");
+  if (!lu.sel) luShow(ev.model);
+}
+$("luGo").onclick = async () => {
+  if (streaming) return;
+  const btn = $("luGo"); btn.disabled = true; btn.classList.add("busy"); $("gen").disabled = true;
+  $("luOut").hidden = true; lu.sel = null;
+  const watermark = $("wm").checked;
+  let done = 0, named = 0, total = 0;
+  try {
+    const r = await fetch("/api/lineup", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: $("prompt").value, watermark,
+        temperature: +$("temp").value, top_p: +$("topp").value, max_new_tokens: +$("len").value }) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done: end } = await reader.read();
+      if (end) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const ev = JSON.parse(buf.slice(0, nl)); buf = buf.slice(nl + 1);
+        if (ev.type === "start") { total = ev.models.length; luBuild(ev.models); }
+        else if (ev.type === "model") {
+          const res = lu.rows[ev.model]?.tr.querySelector("td.res");
+          if (res) res.textContent = ev.loading ? "loading…" : "writing…";
+          $("luStatus").textContent = `${done + 1}/${total} · ${ev.loading ? "loading" : "running"} ${label(ev.model)}`;
+        } else if (ev.type === "result") {
+          done++; named += ev.best === ev.model; luResult(ev);
+        } else if (ev.type === "error") {
+          done++;
+          const res = lu.rows[ev.model]?.tr.querySelector("td.res");
+          if (res) { res.className = "res bad"; res.innerHTML = `<b>error</b>`; res.title = ev.detail; }
+        }
+      }
+    }
+    $("luStatus").textContent = watermark ? `${named}/${total} named correctly` : `${total} ordinary answers: no key should match`;
+  } catch (e) { $("luStatus").innerHTML = `<span class="err">${esc(e.message)}</span>`; }
+  btn.disabled = false; btn.classList.remove("busy"); $("gen").disabled = false;
+};
 </script>
 </body>
 </html>

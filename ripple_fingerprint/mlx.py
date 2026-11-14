@@ -55,25 +55,45 @@ def generate_ids(
     """
     if temperature <= 0:
         raise ValueError("greedy decoding has no randomness to watermark; use temperature > 0")
+    gpu_softmax = not top_k and top_p >= 1.0  # plain temperature: softmax on the GPU
+
+    def forward(ids):
+        """Launch the next forward pass asynchronously; returns what to read back."""
+        logits = model(ids, cache=cache)[0, -1].astype(mx.float32)
+        y = mx.softmax(logits / temperature) if gpu_softmax else logits
+        mx.async_eval(y)
+        return y
+
     cache = make_prompt_cache(model)
-    logits = model(mx.array(prompt_ids)[None], cache=cache)[0, -1]
+    pending = forward(mx.array(prompt_ids)[None])
     history = list(prompt_ids)
     state = watermarker.new_state()
+    draws = None
     out: list[int] = []
     for _ in range(max_new_tokens):
-        p = warp(np.array(logits.astype(mx.float32)), temperature, top_k, top_p)
+        y = np.array(pending)  # waits for the GPU
+        if gpu_softmax:  # float32 from the GPU: renormalize in float64 so it sums to 1 exactly
+            p = y.astype(np.float64)
+            p /= p.sum()
+        else:
+            p = warp(y, temperature, top_k, top_p)
         if watermark:
-            tok = watermarker.sample(p, history, state)
+            tok = watermarker.sample(p, history, state, draws=draws)
         else:
             tok = int(state.rng.choice(p.size, p=p))
             state.last_mode = "plain"
+        if tok in eos_ids:
+            if on_step is not None:
+                on_step(p, history, tok, state)
+            break
+        # Start the GPU on the next token, then do this step's CPU work while it runs:
+        # callbacks (streaming, tracing) and the next step's keyed hash.
+        pending = forward(mx.array([[tok]]))
         if on_step is not None:
             on_step(p, history, tok, state)
-        if tok in eos_ids:
-            break
         history.append(tok)
         out.append(tok)
-        logits = model(mx.array([[tok]]), cache=cache)[0, -1]
+        draws = watermarker.prepare(history, state, p.size) if watermark else None
     return out
 
 

@@ -230,7 +230,10 @@ def _trace_step(tok, wm: Watermarker, p, history, chosen, state) -> dict:
     top = top[np.argsort(-p[top])]
     if chosen not in top:
         top = np.append(top[: TRACE_K - 1], chosen)
-    u = keyed_uniforms(wm.key, list(history[-wm.context_width:]), int(max(top.max(), chosen)) + 1)
+    if state.last_draws is not None:  # keyed step: reuse the sampler's draws, u = exp(-E)
+        u = np.exp(-state.last_draws)
+    else:
+        u = keyed_uniforms(wm.key, list(history[-wm.context_width:]), int(max(top.max(), chosen)) + 1)
     q = p[p > 0]
     mode = state.last_mode
     return {

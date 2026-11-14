@@ -124,3 +124,27 @@ def test_detected_when_spliced_into_human_text(wm):
     machine = generate(wm, [5, 9, 2, 6], 250)
     assert wm.detect(human_a + machine + human_b).is_watermarked
     assert not wm.detect(human_a + human_b).is_watermarked
+
+
+def test_fast_race_matches_reference_and_cache():
+    """The exponential race argmin(-ln u / p), with or without precomputed draws,
+    picks the same token as the reference formula argmin(log(-ln u) - log p)."""
+    from ripple_fingerprint import keyed_uniforms
+
+    wm = Watermarker(KEY, context_width=2, entropy_threshold=0.0)
+    rng = np.random.default_rng(1)
+    for i in range(3000):
+        p = rng.dirichlet(np.full(500, rng.choice([0.01, 0.1, 1.0])))
+        p[rng.random(500) < 0.3] = 0.0  # truncated tails (top-p / top-k)
+        p /= p.sum()
+        hist = [int(rng.integers(1000)), i]
+        u = keyed_uniforms(KEY, hist, p.size)
+        with np.errstate(divide="ignore"):
+            ref = int(np.argmin(np.log(-np.log(u)) - np.log(p)))
+        s1, s2 = wm.new_state(), wm.new_state()
+        s1.active = s2.active = True
+        draws = wm.prepare(hist, s2, p.size)
+        assert draws is not None
+        assert wm.sample(p, hist, s1) == ref
+        assert wm.sample(p, hist, s2, draws=draws) == ref
+        assert p[ref] > 0

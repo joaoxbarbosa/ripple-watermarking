@@ -73,6 +73,8 @@ class GenerationState:
     # How the last token was chosen: "keyed" (watermarked), "warmup" (entropy gate),
     # "repeat" (context seen before) or "start" (not enough context yet).
     last_mode: str = ""
+    # The keyed exponentials -ln(u) used on the last keyed step (for visualizers).
+    last_draws: np.ndarray | None = None
     rng: np.random.Generator = field(
         default_factory=lambda: np.random.default_rng(secrets.randbits(128))
     )
@@ -116,16 +118,41 @@ class Watermarker:
     def new_state(self) -> GenerationState:
         return GenerationState()
 
+    def draws(self, context: Sequence[int], n: int) -> np.ndarray:
+        """Keyed exponentials ``-ln(u)`` for the first ``n`` tokens of this context.
+
+        This is the expensive part of a keyed step (a SHAKE-256 stream plus a log
+        over the vocabulary), and it only depends on the context. So it can be
+        computed while the model is still producing ``probs``. See ``prepare``.
+        """
+        return -np.log(keyed_uniforms(self.key, context, n))
+
+    def prepare(self, history: Sequence[int], state: GenerationState, n: int):
+        """Precompute the next step's draws, if that step will be keyed. Else None.
+
+        Pass the result to ``sample(..., draws=...)``. It is only a cache: the
+        chosen token is exactly the same with or without it.
+        """
+        h = self.context_width
+        if len(history) < h or not state.active:
+            return None
+        ctx = tuple(int(t) for t in history[-h:])
+        if ctx in state.seen_contexts:
+            return None
+        return ctx, self.draws(ctx, n)
+
     def sample(
         self,
         probs: np.ndarray,
         history: Sequence[int],
         state: GenerationState,
+        draws=None,
     ) -> int:
         """Choose the next token.
 
         ``probs``: the model's final next-token distribution (1-D, sums to 1).
         ``history``: all token ids so far (the prompt plus the generated tokens).
+        ``draws``: optional result of ``prepare`` for this step (a speed-up only).
         """
         p = np.asarray(probs, dtype=np.float64)
         p = np.clip(p, 0.0, None)
@@ -134,16 +161,21 @@ class Watermarker:
         h = self.context_width
         ctx = tuple(int(t) for t in history[-h:]) if len(history) >= h else None
 
+        state.last_draws = None
         if ctx is None or not state.active or ctx in state.seen_contexts:
             tok = int(state.rng.choice(len(p), p=p))
             state.last_mode = "start" if ctx is None else ("warmup" if not state.active else "repeat")
         else:
             state.last_mode = "keyed"
-            u = keyed_uniforms(self.key, ctx, len(p))
-            # argmax u^(1/p) == argmin  log(-log u) - log p   (log space: no overflow)
-            with np.errstate(divide="ignore"):
-                race = np.log(-np.log(u)) - np.log(p)
-            tok = int(np.argmin(race))
+            if draws is not None and draws[0] == ctx and len(draws[1]) >= len(p):
+                E = draws[1][: len(p)]
+            else:
+                E = self.draws(ctx, len(p))
+            # Exponential race: argmax u^(1/p) == argmin -ln(u) / p. Tokens with p = 0
+            # get +inf and can't win; overflow for tiny p is also just +inf.
+            with np.errstate(divide="ignore", over="ignore"):
+                tok = int(np.argmin(E / p))
+            state.last_draws = E
 
         if ctx is not None:
             state.seen_contexts.add(ctx)

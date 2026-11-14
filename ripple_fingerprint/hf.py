@@ -57,7 +57,8 @@ class WatermarkLogitsProcessor(LogitsProcessor):
             self.states = [self.wm.new_state() for _ in range(input_ids.shape[0])]
         if len(self.states) != input_ids.shape[0]:
             raise ValueError("batch size changed mid-generation (beam search is not supported)")
-        probs = _to_probs(scores, self.temperature, self.top_k, self.top_p).double().cpu().numpy()
+        # .cpu() before .double(): MPS (Apple GPU) has no float64
+        probs = _to_probs(scores, self.temperature, self.top_k, self.top_p).cpu().double().numpy()
         hist = input_ids.tolist()
         out = torch.full_like(scores, float("-inf"))
         for b, state in enumerate(self.states):

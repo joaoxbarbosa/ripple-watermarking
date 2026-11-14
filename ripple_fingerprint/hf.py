@@ -45,11 +45,16 @@ class WatermarkLogitsProcessor(LogitsProcessor):
     penalty, bad-words, ...) still apply, because this one runs last.
     """
 
-    def __init__(self, watermarker: Watermarker, temperature: float = 1.0, top_k: int = 0, top_p: float = 1.0):
+    def __init__(self, watermarker: Watermarker, temperature: float = 1.0, top_k: int = 0, top_p: float = 1.0,
+                 watermark: bool = True, on_step=None):
+        """``watermark=False`` samples normally with the same settings (for comparisons).
+        ``on_step(probs, history, token, state)`` runs after each choice (batch row 0 only).
+        """
         if temperature <= 0:
             raise ValueError("greedy decoding has no randomness to watermark; use temperature > 0")
         self.wm = watermarker
         self.temperature, self.top_k, self.top_p = temperature, top_k, top_p
+        self.watermark, self.on_step = watermark, on_step
         self.states: list | None = None
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
@@ -62,7 +67,14 @@ class WatermarkLogitsProcessor(LogitsProcessor):
         hist = input_ids.tolist()
         out = torch.full_like(scores, float("-inf"))
         for b, state in enumerate(self.states):
-            tok = self.wm.sample(probs[b], hist[b], state)
+            p = probs[b] / probs[b].sum()
+            if self.watermark:
+                tok = self.wm.sample(p, hist[b], state)
+            else:
+                tok = int(state.rng.choice(p.size, p=p))
+                state.last_mode = "plain"
+            if self.on_step is not None and b == 0:
+                self.on_step(p, hist[b], tok, state)
             out[b, tok] = 0.0
         return out
 
@@ -75,13 +87,15 @@ def watermark_generate(
     top_k: int = 0,
     top_p: float = 1.0,
     logits_processor: LogitsProcessorList | None = None,
+    watermark: bool = True,
+    on_step=None,
     **generate_kwargs,
 ) -> torch.LongTensor:
     """``model.generate`` with the watermark applied. Returns generated ids (prompt included)."""
     if generate_kwargs.get("num_beams", 1) != 1:
         raise ValueError("beam search is not supported with watermarking")
     procs = LogitsProcessorList(logits_processor or [])
-    procs.append(WatermarkLogitsProcessor(watermarker, temperature, top_k, top_p))
+    procs.append(WatermarkLogitsProcessor(watermarker, temperature, top_k, top_p, watermark, on_step))
     generate_kwargs.setdefault("pad_token_id", tokenizer.pad_token_id or tokenizer.eos_token_id)
     return model.generate(
         logits_processor=procs,

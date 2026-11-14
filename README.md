@@ -57,6 +57,46 @@ detect_text(text, tokenizer, wm).is_watermarked
 Or pass `WatermarkLogitsProcessor(wm, temperature, top_k, top_p)` in your
 own `logits_processor` list with `do_sample=False`. See `examples/demo_hf.py`.
 
+## Which model wrote it?
+
+Give every model its own key, derived from one master secret, and the detector
+can tell them apart:
+
+```python
+from ripple_fingerprint import ModelRegistry
+reg = ModelRegistry(master_key=MASTER_SECRET)        # >=16 bytes; the only secret
+wm_big   = reg.register("ripple-65b", tokenizer_big)  # each returns that model's Watermarker:
+wm_small = reg.register("ripple-8b",  tokenizer_small)  # use it in that model's sampling loop
+
+res = reg.attribute(text)        # re-tokenizes with each model's own tokenizer
+res.best                         # "ripple-65b", or None if no model's watermark is there
+res.matches                      # every model present (more than one for a mixed document)
+res.models                       # per-model p-values, most significant first
+res.spans                        # which stretch of text came from which model (character ranges)
+```
+
+- **No mix-ups between models.** Under a key that didn't generate the text,
+  the score is exactly that of ordinary text. So model A's output can't be
+  pinned on model B any more often than ordinary text would be. This holds
+  even for models that share a tokenizer, like Qwen3-4B and Qwen3-0.6B.
+- **One false-positive budget.** Each model gets two tests: the whole text,
+  and the best-scoring stretches of it. Both are corrected for every model
+  and every possible stretch. The chance that *any* model is named for text
+  it didn't write stays below `fpr`.
+- **Mixed documents are split.** `spans` finds the stretches carrying each
+  model's watermark, with exact edges in our tests. A short passage diluted
+  by a long human-written document can still match through its span.
+- **The label is the key.** The key comes from `HMAC(master, label)`. Renaming
+  a model changes its key, so pass `key_id="ripple-65b"` to keep a stable
+  label when the display name or checkpoint path changes.
+- **Only your models.** This identifies models that sample with these keys.
+  It can't say whether text came from someone else's model.
+
+With already-tokenized input from models that share a tokenizer, use
+`reg.attribute_ids(token_ids)`.
+
+![Demo: text with 10% of its words replaced is still attributed to Qwen2.5-0.5B-Instruct; the other models see ordinary text](docs/demo-attribution.jpg)
+
 ## Demo website
 
 ```bash
@@ -68,13 +108,17 @@ On the page you can:
 
 - Generate text with the fingerprint on or off.
 - Edit the text by hand, or use the tamper buttons to replace or delete random words.
-- See whether the fingerprint survives, with a token-by-token heatmap of where
-  the evidence is.
+- See whether the fingerprint survives, and **which model wrote it**: every
+  model is tested and ranked, with a token-by-token heatmap of where the evidence is.
+- Use **+ Append** with different models to build a mixed document, and see
+  which part came from which model.
 
 By default it runs GPT-2 on CPU. To serve Ripple from a machine with enough GPU,
 set `RIPPLE_FP_MODEL=ricursiveAI/Ripple-65B-Preview` (or a local path). For more
-than one GPU, also install `accelerate`. The key comes from `RIPPLE_FP_KEY`, or
-is created once in `demo/.demo_key` (gitignored).
+than one GPU, also install `accelerate`. The master key comes from `RIPPLE_FP_KEY`, or
+is created once in `demo/.demo_key` (gitignored). Each model's key is derived
+from it and the model id, so text generated before per-model keys existed no
+longer checks out.
 
 ## Measured results
 

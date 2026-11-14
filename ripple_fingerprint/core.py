@@ -70,6 +70,9 @@ class GenerationState:
     seen_contexts: set = field(default_factory=set)
     surprisal_bits: float = 0.0
     active: bool = False
+    # How the last token was chosen: "keyed" (watermarked), "warmup" (entropy gate),
+    # "repeat" (context seen before) or "start" (not enough context yet).
+    last_mode: str = ""
     rng: np.random.Generator = field(
         default_factory=lambda: np.random.default_rng(secrets.randbits(128))
     )
@@ -133,7 +136,9 @@ class Watermarker:
 
         if ctx is None or not state.active or ctx in state.seen_contexts:
             tok = int(state.rng.choice(len(p), p=p))
+            state.last_mode = "start" if ctx is None else ("warmup" if not state.active else "repeat")
         else:
+            state.last_mode = "keyed"
             u = keyed_uniforms(self.key, ctx, len(p))
             # argmax u^(1/p) == argmin  log(-log u) - log p   (log space: no overflow)
             with np.errstate(divide="ignore"):

@@ -12,6 +12,7 @@
   :root {
     --bg: #ffffff; --ink: #000000; --muted: #6b6b6b; --faint: #a3a3a3;
     --line: #000000; --hair: #e5e5e5; --field: #fafafa; --hatch: #ececec; --heat: 0, 0, 0;
+    --art: url("/static/swallows.webp"); --art-size: 760px auto; --art-repeat: repeat; --veil: rgba(255, 255, 255, 0.88);
     --sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
@@ -19,17 +20,20 @@
     :root:not([data-theme="light"]) {
       --bg: #0a2e86; --ink: #f3f7ff; --muted: #aec4f5; --faint: #6688d4;
       --line: #6f93e6; --hair: #2550b0; --field: #0d3796; --hatch: #1844a6; --heat: 205, 222, 255;
+      --art: url("/static/sky.webp"); --art-size: cover; --art-repeat: no-repeat; --veil: rgba(10, 46, 134, 0.72);
     }
   }
   :root[data-theme="dark"] {
     --bg: #0a2e86; --ink: #f3f7ff; --muted: #aec4f5; --faint: #6688d4;
     --line: #6f93e6; --hair: #2550b0; --field: #0d3796; --hatch: #1844a6; --heat: 205, 222, 255;
+      --art: url("/static/sky.webp"); --art-size: cover; --art-repeat: no-repeat; --veil: rgba(10, 46, 134, 0.72);
   }
   * { box-sizing: border-box; border-radius: 0; }
   .theme { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 10px; }
   .top-right { display: flex; align-items: center; gap: 16px; }
   html { background: var(--bg); }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans);
+  body { margin: 0; color: var(--ink); font: 15px/1.55 var(--sans);
+    background: linear-gradient(var(--veil), var(--veil)), var(--art) center / var(--art-size) var(--art-repeat) fixed, var(--bg);
     -webkit-font-smoothing: antialiased; letter-spacing: -0.005em; }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px 64px; }
 
@@ -39,7 +43,11 @@
   .brand { font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
   .brand i { width: 12px; height: 12px; background: var(--ink); display: inline-block; }
   .meta { font: 12px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .hero { padding: 56px 0 40px; }
+  .hero { margin: 32px 0 40px; border: 1px solid var(--line); padding: clamp(20px, 5vw, 56px);
+    min-height: 340px; display: flex; align-items: flex-end;
+    background: var(--art) center / var(--art-size) var(--art-repeat), var(--bg); image-rendering: pixelated; }
+  .hero-card { background: var(--bg); border: 1px solid var(--line); padding: clamp(18px, 3vw, 32px); max-width: 640px; }
+  .grid, .heat-panel, .stats, .verdict:not(.yes):not(.weak) { background: var(--bg); }
   h1 { font-size: clamp(34px, 6vw, 64px); line-height: 1.0; letter-spacing: -0.045em; margin: 0; font-weight: 700; max-width: 900px; }
   .sub { color: var(--muted); margin: 18px 0 0; max-width: 560px; font-size: 16px; }
 
@@ -137,6 +145,34 @@
   .err { color: var(--ink); font-weight: 600; }
   footer { margin-top: 20px; font: 12px var(--mono); color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 
+  /* ---------- attribution ---------- */
+  :root { --m0: #e4572e; --m1: #2a9d8f; --m2: #c99700; --m3: #8e44ad; --m4: #3a86ff; --m5: #6a994e; }
+  :root[data-theme="dark"] { --m0: #ff8a65; --m1: #5eead4; --m2: #fde047; --m3: #e9a8ff; --m4: #9ec5ff; --m5: #b5e48c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --m0: #ff8a65; --m1: #5eead4; --m2: #fde047; --m3: #e9a8ff; --m4: #9ec5ff; --m5: #b5e48c; } }
+  .rank { border: 1px solid var(--line); border-top: 0; }
+  .rank-h { display: flex; justify-content: space-between; padding: 10px 16px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .rank button { display: grid; grid-template-columns: 12px minmax(0, 1fr) minmax(60px, 34%) 92px; gap: 12px; align-items: center;
+    width: 100%; border: 0; border-top: 1px solid var(--hair); padding: 9px 16px; text-align: left; font: 13px var(--mono); background: transparent; }
+  .rank button:hover:not(:disabled) { background: var(--field); color: var(--ink); }
+  .rank button.focus { background: var(--field); box-shadow: inset 3px 0 0 var(--ink); }
+  @media (max-width: 520px) { .rank button { grid-template-columns: 10px minmax(0, 1fr) 40px 74px; gap: 8px; padding: 9px 12px; } .rank .nm em { display: none; } }
+  .rank .sw { width: 10px; height: 10px; }
+  .rank .nm { display: flex; min-width: 0; align-items: baseline; }
+  .rank .nm span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank .nm em { flex: none; font-style: normal; font-weight: 600; margin-left: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .rank .bar { height: 6px; background: var(--hair); position: relative; }
+  .rank .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ink); }
+  .rank .pv { text-align: right; color: var(--muted); font-size: 12px; }
+  .rank .pv sup { font-size: 0.7em; }
+  .sources { margin: -4px 0 22px; }
+  .strip { display: flex; height: 26px; border: 1px solid var(--line); background: repeating-linear-gradient(-45deg, var(--bg) 0 6px, var(--hatch) 6px 7px); position: relative; }
+  .strip i { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; padding: 0 6px; overflow: hidden;
+    font: 600 11px var(--mono); color: #000; white-space: nowrap; }
+  .src-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .src-legend b { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+  #heat span.inspan { box-shadow: inset 0 -2px 0 var(--span-c); }
+  .heat-for { font: 500 12px var(--mono); color: var(--muted); text-transform: none; letter-spacing: 0; margin-left: auto; }
+
   .spin { width: 10px; height: 10px; border: 1.5px solid currentColor; border-right-color: transparent; display: none; animation: r .7s linear infinite; border-radius: 50%; }
   .busy .spin { display: inline-block; }
   @keyframes r { to { transform: rotate(360deg); } }
@@ -153,8 +189,10 @@
   </div>
 
   <div class="hero">
+    <div class="hero-card">
     <h1>Invisible to readers.<br>Provable to you.</h1>
-    <p class="sub">Generate text with a hidden fingerprint, edit it however you like, and check whether it survives. Without the key, fingerprinted text is exactly like ordinary output.</p>
+    <p class="sub">Generate text with a hidden fingerprint, edit it however you like, and check whether it survives, and which model wrote it. Each model has its own key. Without the keys, fingerprinted text is exactly like ordinary output.</p>
+    </div>
   </div>
 
   <div class="grid">
@@ -175,6 +213,7 @@
         <span><strong>Add fingerprint</strong><small>Turn off to generate ordinary text to compare against</small></span></label>
       <div class="row" style="margin-top:24px">
         <button class="primary" id="gen"><span class="spin"></span><span id="genLabel">Generate</span> →</button>
+        <button id="genAppend" title="Add the new text after what's already in the box, to build a document from several models">+ Append</button>
         <span class="status" id="genStatus"></span>
       </div>
     </section>
@@ -196,13 +235,16 @@
         <div class="stat"><b id="sZ">—</b><span>Z-score</span></div>
         <div class="stat"><b id="sN">—</b><span>Tokens scored</span></div>
       </div>
+      <div class="rank" id="rank"><div class="rank-h"><span>Which model?</span><span>chance of a fluke</span></div><div id="rankRows"></div></div>
     </section>
   </div>
 
   <section class="heat-panel">
-    <div class="label"><b>03</b>Where the signal is</div>
+    <div class="label"><b>03</b>Who wrote which part<span class="heat-for" id="heatFor"></span></div>
+    <div class="sources" id="sources"></div>
     <div class="legend">
-      <span><span class="ramp" id="ramp"></span>weak → strong evidence</span>
+      <span><span class="ramp" id="ramp"></span>weak → strong evidence for the selected model</span>
+      <span><span style="box-shadow: inset 0 -2px 0 var(--ink)">underlined</span>&nbsp; inside a span it wrote</span>
       <span><span style="text-decoration: underline dotted var(--faint); text-underline-offset: 4px; color: var(--faint)">dotted</span>&nbsp; skipped: no full context, or a repeated one</span>
     </div>
     <div id="heat"></div>
@@ -214,7 +256,8 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const COMMON = ["the","very","really","also","often","quite","some","indeed","just","then","many","still"];
-let original = null, timer = null, seq = 0;
+let original = null, timer = null, seq = 0, focus = null;
+const colorOf = {};
 
 // theme: follows the system until toggled; the choice is remembered per browser
 const root = document.documentElement;
@@ -239,11 +282,11 @@ const model = () => $("modelSel").value;
 const short = (n) => n.split("/").pop();
 function syncModel() {
   $("model").textContent = `Model · ${short(model())}`;
-  $("modelNote").textContent = loaded.has(model())
-    ? "Checking uses this model's tokenizer too, so check text with the model that wrote it."
-    : "Loads on first use (the first time also downloads it). Checking uses this model's tokenizer too.";
+  $("modelNote").textContent = (loaded.has(model()) ? "" : "Loads on first use (the first time also downloads it). ")
+    + "Checking tests every model, so you don't need to say which one wrote the text.";
 }
 fetch("/api/info").then(r => r.json()).then(i => {
+  i.models.forEach((m, k) => colorOf[m.name] = `var(--m${k % 6})`);
   for (const m of i.models) {
     const o = document.createElement("option");
     o.value = m.name; o.textContent = m.name;
@@ -254,11 +297,13 @@ fetch("/api/info").then(r => r.json()).then(i => {
   syncModel();
   $("foot").textContent = `Context ${i.context_width} tokens · flag threshold p < ${i.fpr}`;
 });
-$("modelSel").onchange = () => { syncModel(); if ($("text").value.trim()) check(); };
+$("modelSel").onchange = syncModel;
 
-$("gen").onclick = async () => {
+$("gen").onclick = () => runGen(false);
+$("genAppend").onclick = () => runGen(true);
+async function runGen(append) {
   const btn = $("gen"), m = model();
-  btn.disabled = true; $("modelSel").disabled = true; btn.classList.add("busy");
+  btn.disabled = true; $("genAppend").disabled = true; $("modelSel").disabled = true; btn.classList.add("busy");
   $("genLabel").textContent = loaded.has(m) ? "Generating" : "Loading model";
   $("genStatus").textContent = "";
   try {
@@ -268,13 +313,15 @@ $("gen").onclick = async () => {
     if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
     const d = await r.json();
     loaded.add(m); syncModel();
-    $("text").value = d.text; original = d.text; $("reset").disabled = true;
+    const prev = $("text").value.trim();
+    $("text").value = append && prev ? `${prev}\n\n${d.text}` : d.text;
+    original = $("text").value; $("reset").disabled = true; focus = null;
     $("genStatus").textContent = `${d.watermark ? "Fingerprinted" : "Ordinary"} · ${short(m)} · ${d.seconds}s` +
       (d.load_seconds > 1 ? ` (+${d.load_seconds}s load)` : "");
     check();
   } catch (e) { $("genStatus").innerHTML = `<span class="err">${e.message}</span>`; }
-  btn.disabled = false; $("modelSel").disabled = false; btn.classList.remove("busy"); $("genLabel").textContent = "Generate";
-};
+  btn.disabled = false; $("genAppend").disabled = false; $("modelSel").disabled = false; btn.classList.remove("busy"); $("genLabel").textContent = "Generate";
+}
 
 function tamper(fn) {
   if (original === null) original = $("text").value;
@@ -303,7 +350,7 @@ async function check() {
   const text = $("text").value;
   const my = ++seq;
   if (!text.trim()) { render(null); return; }
-  const r = await fetch("/api/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, model: model() }) });
+  const r = await fetch("/api/detect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, focus }) });
   if (my !== seq || !r.ok) return;
   render(await r.json());
 }
@@ -314,26 +361,81 @@ function verdict(cls, big, detail, tag) {
   v.innerHTML = `<div><div class="big">${big}</div><div class="detail">${detail}</div></div>${tag ? `<span class="tag">${tag}</span>` : ""}`;
 }
 
+const esc = (t) => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
 function render(d) {
   const heat = $("heat");
   heat.replaceChildren();
+  $("rankRows").replaceChildren(); $("sources").replaceChildren(); $("heatFor").textContent = "";
   if (!d) {
     verdict("idle", "Nothing checked yet", "Generate or paste text to see a result.", "");
     ["sP","sZ","sN"].forEach(id => $(id).textContent = "—");
+    $("rankRows").innerHTML = `<div class="rank-h" style="text-transform:none;letter-spacing:0;font-weight:400">Every model is tested; the most likely source comes first.</div>`;
     heat.innerHTML = `<span class="empty">The token-by-token breakdown appears here.</span>`;
     return;
   }
-  const weak = !d.is_watermarked && d.p_value < 0.001;
-  if (d.is_watermarked) verdict("yes", "Fingerprint detected", "This text came from the fingerprinted model, even if it was edited.", "Match");
-  else if (weak) verdict("weak", "Weak trace", "Some of the fingerprint survives, but not enough to call it with confidence. A longer or less-edited passage would settle it.", "Inconclusive");
-  else verdict("no", "No fingerprint found", d.num_scored < 25 ? "Too little text to tell. Try a longer passage." : "Nothing here distinguishes this text from ordinary text.", "No match");
-  $("sP").innerHTML = fluke(d.p_value);
-  $("sZ").textContent = d.z_score.toFixed(1);
-  $("sN").textContent = `${d.num_scored}/${d.num_tokens}`;
+  for (const m of d.models) m.evidence_p ??= m.adjusted_p;   // older servers lack evidence_p
+  const top = d.models[0], name = (n) => esc(short(n));
+  const weak = !d.best && top.evidence_p < 0.001;
+  if (d.matches.length > 1)
+    verdict("yes", `Mixed: ${d.matches.map(name).join(" + ")}`, "Fingerprints from more than one model. Section 03 shows which parts came from which.", "Mixed");
+  else if (d.best)
+    verdict("yes", `Written by ${name(d.best)}`, "Only this model's key matches, even if the text was edited. The other models see it as ordinary text.", "Match");
+  else if (weak)
+    verdict("weak", "Weak trace", `Some of ${name(top.name)}'s fingerprint may survive, but not enough to call it with confidence. A longer or less-edited passage would settle it.`, "Inconclusive");
+  else
+    verdict("no", "No fingerprint found", top.num_scored < 25 ? "Too little text to tell. Try a longer passage." : "No model's key matches. Nothing here distinguishes this text from ordinary text.", "No match");
+
+  const f = d.models.find(m => m.name === d.focus);
+  $("sP").innerHTML = fluke(f.evidence_p);
+  $("sZ").textContent = f.z_score.toFixed(1);
+  $("sN").textContent = `${f.num_scored}/${f.num_tokens}`;
+
+  // ranking: bar length = strength of evidence, log scale up to p = 1e-20
+  for (const m of d.models) {
+    const b = document.createElement("button");
+    b.className = m.name === d.focus ? "focus" : "";
+    const w = Math.min(1, -Math.log10(Math.max(m.evidence_p, 1e-300)) / 20);
+    b.innerHTML = `<span class="sw" style="background:${colorOf[m.name] || "var(--ink)"}"></span>` +
+      `<span class="nm" title="${esc(m.name)}"><span>${name(m.name)}</span>${m.is_match ? "<em>match</em>" : ""}</span>` +
+      `<span class="bar"><i style="width:${(w * 100).toFixed(1)}%"></i></span><span class="pv">${fluke(m.evidence_p)}</span>`;
+    b.title = `Click to show ${m.name}'s evidence below`;
+    b.onclick = () => { focus = m.name; check(); };
+    $("rankRows").appendChild(b);
+  }
+
+  // sources strip: where each model's spans sit in the text
+  const usable = d.spans.filter(sp => sp.start !== null);
+  if (usable.length) {
+    const strip = document.createElement("div"); strip.className = "strip";
+    for (const sp of usable) {
+      const i = document.createElement("i");
+      i.style.left = `${(100 * sp.start / d.text_length).toFixed(2)}%`;
+      i.style.width = `${(100 * (sp.end - sp.start) / d.text_length).toFixed(2)}%`;
+      i.style.background = colorOf[sp.model] || "var(--ink)";
+      i.textContent = short(sp.model);
+      i.title = `${sp.model} · characters ${sp.start}–${sp.end} · ${sp.num_scored} tokens · fluke chance ${sp.p_value.toExponential(1)}`;
+      strip.appendChild(i);
+    }
+    const leg = document.createElement("div"); leg.className = "src-legend";
+    const seen = [...new Set(usable.map(sp => sp.model))];
+    leg.innerHTML = seen.map(m => `<span><b style="background:${colorOf[m]}"></b>${name(m)}</span>`).join("") +
+      `<span><b style="background:repeating-linear-gradient(-45deg,var(--bg) 0 3px,var(--faint) 3px 4px);border:1px solid var(--line)"></b>no fingerprint found</span>`;
+    $("sources").append(strip, leg);
+  } else {
+    $("sources").innerHTML = `<span class="empty" style="font-size:13px">${d.best ? "The fingerprint is spread too thinly to pin to a stretch of text; the whole-text verdict still holds." : "No stretch of the text carries a model's fingerprint."}</span>`;
+  }
+
+  $("heatFor").textContent = `evidence for ${short(d.focus)}`;
+  heat.style.setProperty("--span-c", colorOf[d.focus] || "var(--ink)");
+  const mine = usable.filter(sp => sp.model === d.focus);
+  let pos = 0;
   for (const { t, s } of d.tokens) {
     const el = document.createElement("span");
     el.textContent = t;
-    if (s === null) { el.className = "skip"; el.title = "skipped"; }
+    const mid = pos + t.length / 2; pos += t.length;
+    if (mine.some(sp => mid >= sp.start && mid <= sp.end)) el.classList.add("inspan");
+    if (s === null) { el.classList.add("skip"); el.title = "skipped"; }
     else {
       el.style.background = shade(Math.max(0, Math.min(1, (s - 1) / 4)));   // Exp(1) has mean 1
       el.title = `score ${s.toFixed(2)} (ordinary text averages 1.0)`;
